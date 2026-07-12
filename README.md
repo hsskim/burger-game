@@ -1,56 +1,56 @@
 # 🍔 Burger Game v1
 
-**Burger Game v1**은 제한 시간 내에 함정을 피해 주문서에 적힌 재료를 수집하여 완벽한 햄버거를 완성하는 2D 아케이드 퍼즐 게임입니다. 순수 HTML5 Canvas와 JavaScript로 구현되어 별도의 프레임워크나 이미지 파일 없이(SVG 활용) 브라우저에서 즉시 실행 가능합니다.
+**Burger Game v1** is a 2D arcade puzzle game where you must collect ingredients to build the perfect burger within a time limit while dodging traps. Built purely with HTML5 Canvas and JavaScript, it requires no external frameworks or image assets (using SVG instead) and runs instantly in your browser.
 
 ---
 
-## 🎮 게임 방법 (How to Play)
+## 🎮 How to Play
 
-1. **이동 방식:** 방향키(`←`, `↑`, `↓`, `→`) 또는 `WASD` 키를 이용해 귀여운 버거 캐릭터를 상하좌우로 이동시킵니다.
-2. **조작 및 단축키:**
-   - `Enter` / `Space`: 게임 시작, 다음 스테이지로 넘어가기, 팝업 확인
-   - `R`: 현재 스테이지 즉시 다시 시작
-   - `ESC`: 진행 중단 및 스테이지 선택 화면으로 돌아가기, 팝업 취소
-
----
-
-## 📋 핵심 룰 및 시스템
-
-### 1. 클리어 (Stage Clear)
-- **제한 시간 20초** 내에 좌측 **[주문서]** 패널에 적힌 **모든 재료**를 최소 한 번씩 섭취하면 스테이지가 클리어됩니다.
-- 재료를 먹는 순서가 주문서와 다르거나, 중간에 실수로 쓰레기(함정)를 먹었더라도 남은 시간 내에 필수 재료만 다 모으면 버거는 완성됩니다.
-
-### 2. 실패 (Game Over)
-아래 두 가지 상황 중 하나가 발생하면 즉시 영업 실패로 간주됩니다.
-- ⏰ **시간 초과:** 제한 시간이 0이 될 때까지 모든 재료를 수집하지 못한 경우
-- 😥 **위생 불량 (3-Strike):** 맵 곳곳에 떨어져 있는 **함정(양말, 비누, 신발 등)**을 누적 **3회** 먹은 경우
-
-### 3. ⭐ 별점 시스템 (최대 3별)
-스테이지를 클리어할 때, 달성한 조건에 따라 독립적으로 별점을 획득합니다. 유저가 실수하더라도 포기하지 않고 다른 목표를 달성하도록 장려합니다.
-- **기본 별 (★ 1개):** 무사히 버거를 완성함 (기본 제공)
-- **위생 보너스 (+★ 1개):** 스테이지 내내 **함정을 단 한 번도 먹지 않음**
-- **정확도 보너스 (+★ 1개):** 재료를 **주문서(레시피)에 적힌 순서와 완벽하게 일치**하게 수집함
-> 💡 *예시: 실수로 함정을 1번 밟았더라도, 주문서 순서를 완벽하게 맞추면 총 2개의 별을 받을 수 있습니다!*
+1. **Movement:** Use the arrow keys (`←`, `↑`, `↓`, `→`) or `WASD` to move your cute burger character around the grid.
+2. **Controls:**
+   - `Enter` / `Space`: Start game, proceed to the next stage, confirm popup
+   - `R`: Instantly restart the current stage
+   - `ESC`: Pause game, return to stage selection, cancel popup
 
 ---
 
-## 🎨 주요 특징 (Features)
+## 📋 Core Rules & System
 
-* **다이내믹 UI 및 애니메이션:**
-  * 버거가 맛있는 재료를 먹으면 빵긋 웃으며 부풀어 오르고(`charYum`), 쓰레기를 먹으면 화면이 흔들리며 시무룩한 표정(`charSad`)을 짓는 디테일한 피드백을 제공합니다.
-  * 별점 달성도에 따라 결과 화면 타이틀이 "일단 완성.. 😅", "버거 완성! 🎉", "완벽한 버거 ✨"로 다르게 출력됩니다.
-  * 캔버스 기반의 부드러운 이동(Lerp)과 통통 튀는 모션 처리(Ease-out-back)가 적용되어 있습니다.
-* **로컬 세이브 지원:**
-  * `localStorage`를 활용하여 유저가 클리어한 스테이지와 각 스테이지별 최고 별점 기록이 영구적으로 보존됩니다.
-* **디자인 시스템:**
-  * 깔끔한 그림자(Outer Shadow)와 라운드 패널 모서리, 부드러운 파스텔 톤 색상 조합을 통해 시각적으로 꽉 차면서도 아기자기한 감성을 제공합니다.
+### 1. Stage Clear
+- You have a **20-second time limit**. To clear a stage, you must collect **all the ingredients** listed in the **[Order]** panel on the left at least once.
+- Even if you eat the ingredients in the wrong order or accidentally consume garbage (traps), the stage is cleared as long as you gather all the required ingredients before time runs out.
+
+### 2. Game Over
+If either of the following two conditions is met, it results in an immediate failure:
+- ⏰ **Time Over:** Failed to collect all required ingredients before the timer reaches 0.
+- 😥 **Poor Hygiene (3-Strike):** Eaten scattered **traps (socks, soap, shoes, etc.)** a total of **3 times**.
+
+### 3. ⭐ Star Rating System (Max 3 Stars)
+Upon clearing a stage, you earn stars independently based on the objectives you achieve. This encourages players to try for secondary objectives even if they make a mistake.
+- **Base Star (★ 1):** Successfully clear the stage (guaranteed).
+- **Hygiene Bonus (+★ 1):** Clear the stage **without eating a single trap**.
+- **Accuracy Bonus (+★ 1):** Collect the ingredients in the **exact order** shown on the recipe.
+> 💡 *Example: Even if you accidentally step on 1 trap, you can still earn a total of 2 stars if your ingredient order is perfectly accurate!*
 
 ---
 
-## 🚀 실행 방법 (Setup)
+## 🎨 Features
 
-이 게임은 어떠한 빌드 과정이나 의존성 설치가 필요하지 않습니다.
-1. `index.html` 파일을 최신 웹 브라우저(Chrome, Edge, Safari 등)에서 더블 클릭하여 엽니다.
-2. 로컬 서버(예: VS Code의 Live Server, `python -m http.server`, `npx serve` 등)를 띄워 접속하시면 폰트 로드와 리렌더링이 훨씬 원활합니다.
+* **Dynamic UI & Animations:**
+  * Detailed visual feedback: The burger smiles and swells up (`charYum`) when eating delicious ingredients, but the screen shakes and it frowns (`charSad`) when eating trash.
+  * The results screen title changes dynamically based on your star rating ("Just finished.. 😅", "Burger Complete! 🎉", "Perfect Burger ✨").
+  * Enjoy smooth grid movement (Lerp) and bouncy animations (Ease-out-back) rendered directly on the Canvas.
+* **Local Save Support:**
+  * Uses `localStorage` to permanently save your unlocked stages and the highest star rating achieved for each.
+* **Design System:**
+  * A warm, pastel color palette paired with clean outer shadows and rounded panel borders provides a visually rich and charming aesthetic.
 
-재미있게 플레이해 보세요! 🍔
+---
+
+## 🚀 Setup
+
+This game does not require any build steps or dependency installations.
+1. Simply double-click `index.html` to open it in any modern web browser (Chrome, Edge, Safari, etc.).
+2. For the best experience (smooth font loading and rendering), it is recommended to run it via a local server (e.g., VS Code Live Server, `python -m http.server`, `npx serve`, etc.).
+
+Enjoy building the perfect burger! 🍔
