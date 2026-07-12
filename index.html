@@ -308,6 +308,13 @@
     };
     for (const key of Object.keys(LAYER_SVGS)) IMG[key] = svgImage(LAYER_SVGS[key]);
 
+    // 파비콘(favicon) 동적 추가
+    const faviconLink = document.createElement('link');
+    faviconLink.rel = 'icon';
+    faviconLink.type = 'image/svg+xml';
+    faviconLink.href = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(charSvg(FACE_DEFAULT));
+    document.head.appendChild(faviconLink);
+
     // 스택 아이템 → 레이어 이미지 (재료는 코드, 함정은 trapKey)
     function layerImage(item) {
       return IMG[item.code || item.trapKey];
