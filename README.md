@@ -14,23 +14,16 @@
 
 ---
 
-## 📋 Core Rules & System
+## 🎯 Your Mission
 
-### 1. Stage Clear
-- You have a **20-second time limit**. To clear a stage, you must collect **all the ingredients** listed in the **[Order]** panel on the left at least once.
-- Even if you eat the ingredients in the wrong order or accidentally consume garbage (traps), the stage is cleared as long as you gather all the required ingredients before time runs out.
+Your ultimate goal is to build the perfect burger! Navigate the kitchen, grab what you need, and deliver the order to your hungry customers.
 
-### 2. Game Over
-If either of the following two conditions is met, it results in an immediate failure:
-- ⏰ **Time Over:** Failed to collect all required ingredients before the timer reaches 0.
-- 😥 **Poor Hygiene (3-Strike):** Eaten scattered **traps (socks, soap, shoes, etc.)** a total of **3 times**.
-
-### 3. ⭐ Star Rating System (Max 3 Stars)
-Upon clearing a stage, you earn stars independently based on the objectives you achieve. This encourages players to try for secondary objectives even if they make a mistake.
-- **Base Star (★ 1):** Successfully clear the stage (guaranteed).
-- **Hygiene Bonus (+★ 1):** Clear the stage **without eating a single trap**.
-- **Accuracy Bonus (+★ 1):** Collect the ingredients in the **exact order** shown on the recipe.
-> 💡 *Example: Even if you accidentally step on 1 trap, you can still earn a total of 2 stars if your ingredient order is perfectly accurate!*
+- **Beat the Clock:** Gather all the required ingredients on your order list before the 20-second timer runs out.
+- **Watch Your Step:** The kitchen is messy! If you accidentally eat 3 pieces of trash (like socks or soap), your burger is ruined and it's game over.
+- **Aim for Perfection:** Can you get a 3-star rating?
+  - ⭐ **1 Star:** Complete the burger in time.
+  - ⭐⭐ **2 Stars:** Complete it while either avoiding all traps OR getting the exact ingredient order right.
+  - ⭐⭐⭐ **3 Stars:** Flawless victory! No traps eaten AND perfect ingredient order.
 
 ---
 
