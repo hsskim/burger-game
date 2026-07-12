@@ -2,6 +2,8 @@
 
 **Burger Game v1** is a 2D arcade puzzle game where you must collect ingredients to build the perfect burger within a time limit while dodging traps. Built purely with HTML5 Canvas and JavaScript, it requires no external frameworks or image assets (using SVG instead) and runs instantly in your browser.
 
+🔗 **DEMO:** [Play Burger Game v1](https://hsskim.github.io/burger-game/)
+
 ---
 
 ## 🎮 How to Play
