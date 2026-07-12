@@ -1,202 +1,238 @@
 <!DOCTYPE html>
 <html lang="ko">
+
 <head>
-<meta charset="UTF-8">
-<title>Burger Game</title>
-<link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
-<style>
-  html, body {
-    margin: 0;
-    height: 100%;
-    background: #fdf3d1;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-  }
-  canvas {
-    background: #fff9e6;
-    border-radius: 12px;
-    box-shadow: 0 8px 24px rgba(140, 110, 60, 0.25);
-  }
-</style>
+  <meta charset="UTF-8">
+  <title>Burger Game</title>
+  <link rel="stylesheet" as="style" crossorigin
+    href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
+  <style>
+    html,
+    body {
+      margin: 0;
+      height: 100%;
+      background: #fdf3d1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    canvas {
+      background: #fff9e6;
+      border-radius: 14px;
+      box-shadow: 0 4px 24px rgba(120, 100, 80, 0.10);
+    }
+  </style>
 </head>
+
 <body>
-<canvas id="game" width="960" height="640"></canvas>
-<script>
-'use strict';
+  <canvas id="game" width="960" height="640"></canvas>
+  <script>
+    'use strict';
 
-// ===== 상수 =====
-const CANVAS_W = 960;
-const CANVAS_H = 640;
-const CELL = 48;              // 셀 크기(px)
+    // ===== 상수 =====
 
-// 화면 레이아웃: 중앙 정사각 게임 영역 + 좌우 별도 패널
-const GAME_SIZE = 432;                       // 정사각 게임 영역 한 변(px)
-const GAME_X = (CANVAS_W - GAME_SIZE) / 2;   // 게임 영역 좌측 x
-const GAME_Y = 96;                           // 게임 영역 상단 y
-const SIDE_W = 216;                          // 좌우 패널 너비
-const SIDE_L_X = 26;                         // 주문서 패널 x
-const SIDE_R_X = CANVAS_W - 26 - SIDE_W;     // 버거 스택 패널 x
-const HEADER_X = 28;                         // 좌상단 로고 x
-const HEADER_Y = 22;                         // 좌상단 로고 y
-const MOVES_PER_SEC = 6;      // 연속 이동 속도 (초당 최대 칸 수)
-const MOVE_INTERVAL = 1 / MOVES_PER_SEC;
-const LERP_SPEED = 18;        // 캐릭터 그리기 위치 보간 속도
+    // 색상 팔레트 (디자인 시스템)
+    const COLORS = {
+      bg: '#fff9e6',
+      panel: '#fffdf5',
+      panelBorder: '#ece4d8',
+      wall: '#c4b5a3',
+      wallHighlight: 'rgba(255,255,255,0.15)',
+      floorLight: '#fefcf7',
+      floorDark: '#f7f0e5',
+      accent: '#f0a868',
+      accentSoft: '#fff4e0',
+      accentBorder: '#e8c49a',
+      text: '#6b5c4c',
+      textSub: '#9c8e7e',
+      timerGreen: '#7ec98a',
+      timerOrange: '#f0a868',
+      timerRed: '#e06c5a',
+      timerBg: '#ece4d8',
+      star: '#f5c155',
+      starEmpty: '#ddd4c6',
+      overlay: 'rgba(90, 68, 38, 0.6)',
+      mapShadow: 'rgba(80, 65, 45, 0.18)',
+      highlight: '#fff4e0',
+      highlightBorder: '#f0a868',
+      check: '#7fa96e',
+    };
+    const CANVAS_W = 960;
+    const CANVAS_H = 640;
+    const CELL = 48;              // 셀 크기(px)
 
-// 재료 코드 → 이름·이모지 (prd.md 문자 매핑)
-const INGREDIENTS = {
-  P: { name: 'patty',   emoji: '🥩' },
-  C: { name: 'cheese',  emoji: '🧀' },
-  L: { name: 'lettuce', emoji: '🥬' },
-  T: { name: 'tomato',  emoji: '🍅' },
-  O: { name: 'onion',   emoji: '🧅' },
-  B: { name: 'bacon',   emoji: '🥓' },
-  E: { name: 'egg',     emoji: '🍳' },
-  K: { name: 'pickle',  emoji: '🥒' },
-};
-// 함정: 키별 이모지 (스택 레이어 SVG는 LAYER_SVGS에서 같은 키로 정의)
-const TRAPS = {
-  sock:   { emoji: '🧦' },
-  soap:   { emoji: '🧼' },
-  shoe:   { emoji: '👟' },
-  sponge: { emoji: '🧽' },
-  ball:   { emoji: '🎱' },
-};
-const TRAP_KEYS = Object.keys(TRAPS);
-const EAT_POP_MS = 300;       // 스택에 쌓일 때 통통 튀는 시간(ms)
-const YUM_MS = 600;           // 재료 섭취 후 냠냠 표정 유지 시간(ms)
-const STACK_LAYER_W = 110;    // 우측 스택 패널 레이어 너비(px)
-const STACK_STEP = 16;        // 스택 레이어 간 세로 간격(px)
-const TRAP_SHAKE_MS = 250;    // 함정 섭취 시 화면 흔들림 시간(ms)
+    // 화면 레이아웃: 중앙 정사각 게임 영역 + 좌우 별도 패널
+    const GAME_SIZE = 432;                       // 정사각 게임 영역 한 변(px)
+    const GAME_X = (CANVAS_W - GAME_SIZE) / 2;   // 게임 영역 좌측 x
+    const GAME_Y = 120;                          // 게임 영역 상단 y
+    const SIDE_W = 216;                          // 좌우 패널 너비
+    const SIDE_L_X = 26;                         // 주문서 패널 x
+    const SIDE_R_X = CANVAS_W - 26 - SIDE_W;     // 버거 스택 패널 x
+    const HEADER_X = 28;                         // 좌상단 로고 x
+    const HEADER_Y = 22;                         // 좌상단 로고 y
+    const MOVES_PER_SEC = 6;      // 연속 이동 속도 (초당 최대 칸 수)
+    const MOVE_INTERVAL = 1 / MOVES_PER_SEC;
+    const LERP_SPEED = 18;        // 캐릭터 그리기 위치 보간 속도
 
-// 통통 튀는 이징: 목표를 살짝 지나쳤다가 되돌아온다
-function easeOutBack(t) {
-  const s = 1.70158;
-  return 1 + (s + 1) * Math.pow(t - 1, 3) + s * Math.pow(t - 1, 2);
-}
-const BUN_FALL_MS = 500;      // 완성 시 위쪽 번이 떨어지는 시간(ms)
-const CLEAR_POPUP_DELAY_MS = 700; // 번 착지 후 클리어 팝업까지 지연(ms)
-const SAVE_KEY = 'burger-game-save'; // localStorage 키 (스테이지별 최고 별점)
+    // 재료 코드 → 이름·이모지 (prd.md 문자 매핑)
+    const INGREDIENTS = {
+      P: { name: 'patty', emoji: '🥩' },
+      C: { name: 'cheese', emoji: '🧀' },
+      L: { name: 'lettuce', emoji: '🥬' },
+      T: { name: 'tomato', emoji: '🍅' },
+      O: { name: 'onion', emoji: '🧅' },
+      B: { name: 'bacon', emoji: '🥓' },
+      E: { name: 'egg', emoji: '🍳' },
+      K: { name: 'pickle', emoji: '🥒' },
+    };
+    // 함정: 키별 이모지 (스택 레이어 SVG는 LAYER_SVGS에서 같은 키로 정의)
+    const TRAPS = {
+      sock: { emoji: '🧦' },
+      soap: { emoji: '🧼' },
+      shoe: { emoji: '👟' },
+      sponge: { emoji: '🧽' },
+      ball: { emoji: '🎱' },
+    };
+    const TRAP_KEYS = Object.keys(TRAPS);
+    const EAT_POP_MS = 300;       // 스택에 쌓일 때 통통 튀는 시간(ms)
+    const YUM_MS = 600;           // 재료 섭취 후 냠냠 표정 유지 시간(ms)
+    const STACK_LAYER_W = 110;    // 우측 스택 패널 레이어 너비(px)
+    const STACK_STEP = 16;        // 스택 레이어 간 세로 간격(px)
+    const TRAP_SHAKE_MS = 250;    // 함정 섭취 시 화면 흔들림 시간(ms)
 
-// 실패 화면 랜덤 코멘트
-const FAIL_COMMENTS = [
-  '이건... 판매할 수 없어요',
-  '양말버거 나왔습니다',
-  '손님이 도망갔어요',
-  '주방장이 울고 있어요',
-  '이 버거, 살아 움직일 것 같아요',
-  '위생 검사관이 오고 있습니다',
-  '냄새가... 심상치 않은데요',
-  '다시 만들어 주실 거죠?',
-  '이건 버거가 아니라 사건입니다',
-  '오늘 영업은 여기까지...',
-];
+    // 통통 튀는 이징: 목표를 살짝 지나쳤다가 되돌아온다
+    function easeOutBack(t) {
+      const s = 1.70158;
+      return 1 + (s + 1) * Math.pow(t - 1, 3) + s * Math.pow(t - 1, 2);
+    }
+    const BUN_FALL_MS = 500;      // 완성 시 위쪽 번이 떨어지는 시간(ms)
+    const CLEAR_POPUP_DELAY_MS = 700; // 번 착지 후 클리어 팝업까지 지연(ms)
+    const SAVE_KEY = 'burger-game-save'; // localStorage 키 (스테이지별 최고 별점)
 
-// ===== 스테이지 데이터 =====
-// 모든 스테이지는 함정을 하나도 밟지 않고 주문 순서대로 먹는 경로가 존재하도록 설계
-const STAGES = [
-  {
-    // 재료 2, 함정 0 — 조작·규칙 학습 (외길 스네이크)
-    id: 1,
-    name: '첫 주문',
-    timeLimit: 20,
-    recipe: ['patty', 'cheese'],
-    grid: [
-      '#########',
-      '#S......#',
-      '#######.#',
-      '#......P#',
-      '#.#######',
-      '#C......#',
-      '#######.#',
-      '#.......#',
-      '#########',
-    ],
-  },
-  {
-    // 재료 3, 함정 2 — 회피 개념 도입 (함정이 지름길을 지킨다)
-    id: 2,
-    name: '함정 주의',
-    timeLimit: 20,
-    recipe: ['patty', 'cheese', 'lettuce'],
-    grid: [
-      '#########',
-      '#S..#X..#',
-      '#.##.##.#',
-      '#P..#C..#',
-      '#.#####.#',
-      '#..X....#',
-      '#.##.##L#',
-      '#.......#',
-      '#########',
-    ],
-  },
-  {
-    // 재료 4, 함정 4, 벽 등장 — 경로 계획 필요
-    id: 3,
-    name: '미로 주방',
-    timeLimit: 20,
-    recipe: ['patty', 'lettuce', 'cheese', 'tomato'],
-    grid: [
-      '#########',
-      '#S.#..#T#',
-      '#.##.#..#',
-      '#P.#.#..#',
-      '#..X.#C.#',
-      '#.####..#',
-      '#..X.X..#',
-      '#L.....X#',
-      '#########',
-    ],
-  },
-  {
-    // 재료 5, 함정 6, 좁은 통로 — 순서 최적화
-    id: 4,
-    name: '좁은 통로',
-    timeLimit: 20,
-    recipe: ['patty', 'onion', 'lettuce', 'cheese', 'tomato'],
-    grid: [
-      '#########',
-      '#SX.#.XT#',
-      '#.#X#X#.#',
-      '#.#.#.#.#',
-      '#P....#C#',
-      '#.#.#.#.#',
-      '#.#X#.#.#',
-      '#OX.#..L#',
-      '#########',
-    ],
-  },
-  {
-    // 재료 7, 함정 8, 시간 빠듯 — 종합 난이도
-    id: 5,
-    name: '러시아워',
-    timeLimit: 20,
-    recipe: ['tomato', 'patty', 'onion', 'lettuce', 'bacon', 'cheese', 'egg'],
-    grid: [
-      '#########',
-      '#S.....B#',
-      '#.##.##.#',
-      '#.XX..X.#',
-      '#T.#L#.C#',
-      '#..X.XX.#',
-      '#.##.##.#',
-      '#P.OX.XE#',
-      '#########',
-    ],
-  },
-];
+    // 실패 화면 랜덤 코멘트
+    const FAIL_COMMENTS_TRAP = [
+      '이건... 판매할 수 없어요',
+      '손님이 도망갔어요',
+      '주방장이 울고 있어요',
+      '이 버거, 살아 움직일 것 같아요',
+      '위생 검사관이 오고 있습니다',
+      '냄새가... 심상치 않은데요',
+      '이건 버거가 아니라 사건입니다',
+    ];
+    const FAIL_COMMENTS_TIMEOUT = [
+      '손님이 화내며 나갔어요',
+      '패티가 다 식어버렸어요',
+      '오늘 영업은 여기까지...',
+      '시간이 생명인데!',
+      '주문이 너무 밀렸어요',
+    ];
 
-// ===== SVG 에셋 (문자열 → Image 변환, 단일 파일 유지) =====
-function svgImage(svg) {
-  const img = new Image();
-  img.src = 'data:image/svg+xml,' + encodeURIComponent(svg);
-  return img;
-}
+    // ===== 스테이지 데이터 =====
+    // 모든 스테이지는 함정을 하나도 밟지 않고 주문 순서대로 먹는 경로가 존재하도록 설계
+    const STAGES = [
+      {
+        // 재료 2, 함정 0 — 조작·규칙 학습 (외길 스네이크)
+        id: 1,
+        name: '첫 주문',
+        timeLimit: 20,
+        recipe: ['patty', 'cheese'],
+        grid: [
+          '#########',
+          '#S......#',
+          '#######.#',
+          '#......P#',
+          '#.#######',
+          '#C......#',
+          '#######.#',
+          '#.......#',
+          '#########',
+        ],
+      },
+      {
+        // 재료 3, 함정 2 — 회피 개념 도입 (함정이 지름길을 지킨다)
+        id: 2,
+        name: '함정 주의',
+        timeLimit: 20,
+        recipe: ['patty', 'cheese', 'lettuce'],
+        grid: [
+          '#########',
+          '#S..#X..#',
+          '#.##.##.#',
+          '#P..#C..#',
+          '#.#####.#',
+          '#..X....#',
+          '#.##.##L#',
+          '#.......#',
+          '#########',
+        ],
+      },
+      {
+        // 재료 4, 함정 4, 벽 등장 — 경로 계획 필요
+        id: 3,
+        name: '미로 주방',
+        timeLimit: 20,
+        recipe: ['patty', 'lettuce', 'cheese', 'tomato'],
+        grid: [
+          '#########',
+          '#S.#..#T#',
+          '#.##.#..#',
+          '#P.#.#..#',
+          '#..X.#C.#',
+          '#.####..#',
+          '#..X.X..#',
+          '#L.....X#',
+          '#########',
+        ],
+      },
+      {
+        // 재료 5, 함정 6, 좁은 통로 — 순서 최적화
+        id: 4,
+        name: '좁은 통로',
+        timeLimit: 20,
+        recipe: ['patty', 'onion', 'lettuce', 'cheese', 'tomato'],
+        grid: [
+          '#########',
+          '#SX.#.XT#',
+          '#.#X#X#.#',
+          '#.#.#.#.#',
+          '#P....#C#',
+          '#.#.#.#.#',
+          '#.#X#.#.#',
+          '#OX.#..L#',
+          '#########',
+        ],
+      },
+      {
+        // 재료 7, 함정 8, 시간 빠듯 — 종합 난이도
+        id: 5,
+        name: '러시아워',
+        timeLimit: 20,
+        recipe: ['tomato', 'patty', 'onion', 'lettuce', 'bacon', 'cheese', 'egg'],
+        grid: [
+          '#########',
+          '#S.....B#',
+          '#.##.##.#',
+          '#.XX..X.#',
+          '#T.#L#.C#',
+          '#..X.XX.#',
+          '#.##.##.#',
+          '#P.OX.XE#',
+          '#########',
+        ],
+      },
+    ];
 
-// 캐릭터: 빈 번 두 장 사이로 큰 눈이 보이는 디자인. 표정(face)만 갈아끼운다.
-function charSvg(face) {
-  return `<svg xmlns='http://www.w3.org/2000/svg' width='64' height='64' viewBox='0 0 64 64'>
+    // ===== SVG 에셋 (문자열 → Image 변환, 단일 파일 유지) =====
+    function svgImage(svg) {
+      const img = new Image();
+      img.src = 'data:image/svg+xml,' + encodeURIComponent(svg);
+      return img;
+    }
+
+    // 캐릭터: 빈 번 두 장 사이로 큰 눈이 보이는 디자인. 표정(face)만 갈아끼운다.
+    function charSvg(face) {
+      return `<svg xmlns='http://www.w3.org/2000/svg' width='64' height='64' viewBox='0 0 64 64'>
     <ellipse cx='22' cy='59' rx='6' ry='3.5' fill='#d9863f'/>
     <ellipse cx='42' cy='59' rx='6' ry='3.5' fill='#d9863f'/>
     <rect x='9' y='44' width='46' height='13' rx='6.5' fill='#f2a94e' stroke='#a06a2c' stroke-width='2.5'/>
@@ -206,10 +242,10 @@ function charSvg(face) {
     <ellipse cx='43' cy='20' rx='2.6' ry='1.6' fill='#fff3d6'/>
     ${face}
   </svg>`;
-}
+    }
 
-// 표정 3종: 기본 / 냠냠(섭취 순간) / 시무룩(실패)
-const FACE_DEFAULT = `
+    // 표정 3종: 기본 / 냠냠(섭취 순간) / 시무룩(실패)
+    const FACE_DEFAULT = `
   <circle cx='24' cy='39' r='7' fill='#fff' stroke='#6b4a22' stroke-width='2'/>
   <circle cx='40' cy='39' r='7' fill='#fff' stroke='#6b4a22' stroke-width='2'/>
   <circle cx='25' cy='40' r='3' fill='#3a2a16'/>
@@ -218,13 +254,13 @@ const FACE_DEFAULT = `
   <circle cx='42.2' cy='38.6' r='1' fill='#fff'/>
   <path d='M29 47 Q32 50 35 47' fill='none' stroke='#6b4a22' stroke-width='2' stroke-linecap='round'/>`;
 
-const FACE_YUM = `
+    const FACE_YUM = `
   <path d='M18 40 Q24 33 30 40' fill='none' stroke='#6b4a22' stroke-width='2.5' stroke-linecap='round'/>
   <path d='M34 40 Q40 33 46 40' fill='none' stroke='#6b4a22' stroke-width='2.5' stroke-linecap='round'/>
   <ellipse cx='32' cy='47' rx='5' ry='3.5' fill='#7a3b2a' stroke='#6b4a22' stroke-width='2'/>
   <ellipse cx='32' cy='48.5' rx='2.5' ry='1.5' fill='#ff8f7a'/>`;
 
-const FACE_SAD = `
+    const FACE_SAD = `
   <circle cx='24' cy='39' r='7' fill='#fff' stroke='#6b4a22' stroke-width='2'/>
   <circle cx='40' cy='39' r='7' fill='#fff' stroke='#6b4a22' stroke-width='2'/>
   <circle cx='25' cy='41.5' r='3' fill='#3a2a16'/>
@@ -234,11 +270,11 @@ const FACE_SAD = `
   <path d='M29 50 Q32 47 35 50' fill='none' stroke='#6b4a22' stroke-width='2' stroke-linecap='round'/>
   <ellipse cx='17' cy='45' rx='1.6' ry='2.6' fill='#8ecbff'/>`;
 
-// 버거 스택 레이어: 재료 8종(코드) + 함정 5종(키) + 번 2종
-const LAYER_HEAD = `<svg xmlns='http://www.w3.org/2000/svg' width='120' height='30' viewBox='0 0 120 30'>`;
-const LAYER_SVGS = {
-  bunBottom: `${LAYER_HEAD}<path d='M8 8 L112 8 Q116 8 116 15 Q116 25 102 25 L18 25 Q4 25 4 15 Q4 8 8 8 Z' fill='#f2a94e' stroke='#a06a2c' stroke-width='2.5'/></svg>`,
-  bunTop: `<svg xmlns='http://www.w3.org/2000/svg' width='120' height='44' viewBox='0 0 120 44'>
+    // 버거 스택 레이어: 재료 8종(코드) + 함정 5종(키) + 번 2종
+    const LAYER_HEAD = `<svg xmlns='http://www.w3.org/2000/svg' width='120' height='30' viewBox='0 0 120 30'>`;
+    const LAYER_SVGS = {
+      bunBottom: `${LAYER_HEAD}<path d='M8 8 L112 8 Q116 8 116 15 Q116 25 102 25 L18 25 Q4 25 4 15 Q4 8 8 8 Z' fill='#f2a94e' stroke='#a06a2c' stroke-width='2.5'/></svg>`,
+      bunTop: `<svg xmlns='http://www.w3.org/2000/svg' width='120' height='44' viewBox='0 0 120 44'>
     <path d='M8 40 Q4 40 4 34 Q4 6 60 6 Q116 6 116 34 Q116 40 112 40 Z' fill='#f6bd63' stroke='#a06a2c' stroke-width='2.5'/>
     <ellipse cx='38' cy='15' rx='3' ry='1.8' fill='#fff3d6'/>
     <ellipse cx='60' cy='12' rx='3' ry='1.8' fill='#fff3d6'/>
@@ -250,871 +286,1087 @@ const LAYER_SVGS = {
     <circle cx='49' cy='27.8' r='0.9' fill='#fff'/>
     <circle cx='75' cy='27.8' r='0.9' fill='#fff'/>
   </svg>`,
-  P: `${LAYER_HEAD}<rect x='6' y='5' width='108' height='20' rx='10' fill='#8c5330' stroke='#5f3517' stroke-width='2.5'/><circle cx='30' cy='13' r='1.8' fill='#6e3d1f'/><circle cx='55' cy='18' r='1.8' fill='#6e3d1f'/><circle cx='80' cy='12' r='1.8' fill='#6e3d1f'/><circle cx='95' cy='17' r='1.8' fill='#6e3d1f'/></svg>`,
-  C: `${LAYER_HEAD}<path d='M10 5 L110 5 Q114 5 114 10 Q114 16 108 16 L102 16 Q100 25 95 16 L72 16 Q70 27 64 16 L40 16 Q38 24 33 16 L12 16 Q6 16 6 10 Q6 5 10 5 Z' fill='#ffbe3d' stroke='#cd8a1e' stroke-width='2.5' stroke-linejoin='round'/></svg>`,
-  L: `${LAYER_HEAD}<path d='M6 15 Q11 4 19 13 Q26 3 34 13 Q42 3 50 13 Q58 3 66 13 Q74 3 82 13 Q90 3 98 13 Q106 4 114 15 Q107 26 99 20 Q91 27 83 20 Q75 27 67 20 Q59 27 51 20 Q43 27 35 20 Q27 27 19 20 Q12 26 6 15 Z' fill='#8fce6a' stroke='#549638' stroke-width='2.5' stroke-linejoin='round'/></svg>`,
-  T: `${LAYER_HEAD}<rect x='12' y='6' width='96' height='18' rx='9' fill='#e85d4a' stroke='#b23a2b' stroke-width='2.5'/><rect x='20' y='10' width='80' height='10' rx='5' fill='#f28575'/><circle cx='36' cy='15' r='1.6' fill='#ffd9a0'/><circle cx='60' cy='15' r='1.6' fill='#ffd9a0'/><circle cx='84' cy='15' r='1.6' fill='#ffd9a0'/></svg>`,
-  O: `${LAYER_HEAD}<ellipse cx='60' cy='15' rx='53' ry='11' fill='#f7ecf9' stroke='#c9a3d4' stroke-width='3'/><ellipse cx='60' cy='15' rx='36' ry='7' fill='none' stroke='#d5b3de' stroke-width='2.5'/><ellipse cx='60' cy='15' rx='19' ry='3.5' fill='none' stroke='#d5b3de' stroke-width='2'/></svg>`,
-  B: `${LAYER_HEAD}<path d='M8 11 Q20 5 32 11 Q44 17 56 11 Q68 5 80 11 Q92 17 104 11 L112 15 Q100 21 88 16 Q76 11 64 17 Q52 23 40 17 Q28 11 16 17 Z' fill='#c2543a' stroke='#8f3524' stroke-width='2.5' stroke-linejoin='round'/><path d='M14 13 Q26 8 38 13 Q50 18 62 12 Q74 7 86 13 Q94 16 102 13' fill='none' stroke='#f2b8a0' stroke-width='2.5' stroke-linecap='round'/></svg>`,
-  E: `${LAYER_HEAD}<path d='M14 19 Q8 9 22 8 Q32 2 44 8 Q56 3 68 8 Q82 3 94 9 Q110 10 106 18 Q108 25 94 25 L24 25 Q10 25 14 19 Z' fill='#fdfdf5' stroke='#d8cfae' stroke-width='2.5' stroke-linejoin='round'/><circle cx='60' cy='15' r='7.5' fill='#ffc93c' stroke='#e0a21e' stroke-width='2'/><circle cx='57.5' cy='12.5' r='2' fill='#ffe08a'/></svg>`,
-  K: `${LAYER_HEAD}<g fill='#8fbf4d' stroke='#5f8f2f' stroke-width='2.5'><ellipse cx='28' cy='15' rx='15' ry='9'/><ellipse cx='60' cy='15' rx='15' ry='9'/><ellipse cx='92' cy='15' rx='15' ry='9'/></g><g fill='none' stroke='#b8dd8e' stroke-width='2'><ellipse cx='28' cy='15' rx='8' ry='4.5'/><ellipse cx='60' cy='15' rx='8' ry='4.5'/><ellipse cx='92' cy='15' rx='8' ry='4.5'/></g></svg>`,
-  sock: `${LAYER_HEAD}<path d='M32 6 L78 6 Q82 6 82 11 L82 14 Q94 16 93 22 Q92 27 84 27 L58 27 Q52 27 52 21 L52 18 L32 18 Q28 18 28 12 Q28 6 32 6 Z' fill='#a9c4e4' stroke='#5e7ba0' stroke-width='2.5' stroke-linejoin='round'/><path d='M32 9.5 L52 9.5 M32 14 L52 14' stroke='#7f9dc4' stroke-width='2.5'/></svg>`,
-  soap: `${LAYER_HEAD}<rect x='32' y='6' width='56' height='19' rx='9' fill='#7fd4c9' stroke='#48a094' stroke-width='2.5'/><ellipse cx='60' cy='12' rx='16' ry='4' fill='#b9ece6'/><circle cx='92' cy='6' r='3' fill='none' stroke='#9fd8d1' stroke-width='2'/><circle cx='99' cy='11' r='2' fill='none' stroke='#9fd8d1' stroke-width='2'/></svg>`,
-  shoe: `${LAYER_HEAD}<path d='M22 21 L22 10 Q22 6 27 6 L40 6 Q46 6 50 11 Q57 19 74 19 Q90 19 94 21 Q97 22 96 24 L24 24 Q22 24 22 21 Z' fill='#f08ca4' stroke='#b25a72' stroke-width='2.5' stroke-linejoin='round'/><rect x='20' y='23' width='78' height='4.5' rx='2.2' fill='#fff' stroke='#c9c9c9' stroke-width='1.5'/><path d='M34 10 L42 14 M32 15 L42 18' stroke='#fff' stroke-width='2' stroke-linecap='round'/></svg>`,
-  sponge: `${LAYER_HEAD}<rect x='26' y='9' width='68' height='17' rx='4' fill='#ffd94a' stroke='#d9a92e' stroke-width='2.5'/><rect x='26' y='4' width='68' height='9' rx='3' fill='#8fce6a' stroke='#549638' stroke-width='2'/><circle cx='40' cy='18' r='1.5' fill='#e3b93a'/><circle cx='58' cy='21' r='1.5' fill='#e3b93a'/><circle cx='76' cy='17' r='1.5' fill='#e3b93a'/></svg>`,
-  ball: `${LAYER_HEAD}<circle cx='60' cy='15' r='13' fill='#33333d' stroke='#17171d' stroke-width='2'/><circle cx='60' cy='10.5' r='4.8' fill='#fff'/><text x='60' y='13' text-anchor='middle' font-family='sans-serif' font-size='7' font-weight='bold' fill='#17171d'>8</text><ellipse cx='51' cy='9' rx='3' ry='2' fill='rgba(255,255,255,0.35)'/></svg>`,
-};
+      P: `${LAYER_HEAD}<rect x='6' y='5' width='108' height='20' rx='10' fill='#8c5330' stroke='#5f3517' stroke-width='2.5'/><circle cx='30' cy='13' r='1.8' fill='#6e3d1f'/><circle cx='55' cy='18' r='1.8' fill='#6e3d1f'/><circle cx='80' cy='12' r='1.8' fill='#6e3d1f'/><circle cx='95' cy='17' r='1.8' fill='#6e3d1f'/></svg>`,
+      C: `${LAYER_HEAD}<path d='M10 5 L110 5 Q114 5 114 10 Q114 16 108 16 L102 16 Q100 25 95 16 L72 16 Q70 27 64 16 L40 16 Q38 24 33 16 L12 16 Q6 16 6 10 Q6 5 10 5 Z' fill='#ffbe3d' stroke='#cd8a1e' stroke-width='2.5' stroke-linejoin='round'/></svg>`,
+      L: `${LAYER_HEAD}<path d='M6 15 Q11 4 19 13 Q26 3 34 13 Q42 3 50 13 Q58 3 66 13 Q74 3 82 13 Q90 3 98 13 Q106 4 114 15 Q107 26 99 20 Q91 27 83 20 Q75 27 67 20 Q59 27 51 20 Q43 27 35 20 Q27 27 19 20 Q12 26 6 15 Z' fill='#8fce6a' stroke='#549638' stroke-width='2.5' stroke-linejoin='round'/></svg>`,
+      T: `${LAYER_HEAD}<rect x='12' y='6' width='96' height='18' rx='9' fill='#e85d4a' stroke='#b23a2b' stroke-width='2.5'/><rect x='20' y='10' width='80' height='10' rx='5' fill='#f28575'/><circle cx='36' cy='15' r='1.6' fill='#ffd9a0'/><circle cx='60' cy='15' r='1.6' fill='#ffd9a0'/><circle cx='84' cy='15' r='1.6' fill='#ffd9a0'/></svg>`,
+      O: `${LAYER_HEAD}<ellipse cx='60' cy='15' rx='53' ry='11' fill='#f7ecf9' stroke='#c9a3d4' stroke-width='3'/><ellipse cx='60' cy='15' rx='36' ry='7' fill='none' stroke='#d5b3de' stroke-width='2.5'/><ellipse cx='60' cy='15' rx='19' ry='3.5' fill='none' stroke='#d5b3de' stroke-width='2'/></svg>`,
+      B: `${LAYER_HEAD}<path d='M8 11 Q20 5 32 11 Q44 17 56 11 Q68 5 80 11 Q92 17 104 11 L112 15 Q100 21 88 16 Q76 11 64 17 Q52 23 40 17 Q28 11 16 17 Z' fill='#c2543a' stroke='#8f3524' stroke-width='2.5' stroke-linejoin='round'/><path d='M14 13 Q26 8 38 13 Q50 18 62 12 Q74 7 86 13 Q94 16 102 13' fill='none' stroke='#f2b8a0' stroke-width='2.5' stroke-linecap='round'/></svg>`,
+      E: `${LAYER_HEAD}<path d='M14 19 Q8 9 22 8 Q32 2 44 8 Q56 3 68 8 Q82 3 94 9 Q110 10 106 18 Q108 25 94 25 L24 25 Q10 25 14 19 Z' fill='#fdfdf5' stroke='#d8cfae' stroke-width='2.5' stroke-linejoin='round'/><circle cx='60' cy='15' r='7.5' fill='#ffc93c' stroke='#e0a21e' stroke-width='2'/><circle cx='57.5' cy='12.5' r='2' fill='#ffe08a'/></svg>`,
+      K: `${LAYER_HEAD}<g fill='#8fbf4d' stroke='#5f8f2f' stroke-width='2.5'><ellipse cx='28' cy='15' rx='15' ry='9'/><ellipse cx='60' cy='15' rx='15' ry='9'/><ellipse cx='92' cy='15' rx='15' ry='9'/></g><g fill='none' stroke='#b8dd8e' stroke-width='2'><ellipse cx='28' cy='15' rx='8' ry='4.5'/><ellipse cx='60' cy='15' rx='8' ry='4.5'/><ellipse cx='92' cy='15' rx='8' ry='4.5'/></g></svg>`,
+      sock: `${LAYER_HEAD}<path d='M32 6 L78 6 Q82 6 82 11 L82 14 Q94 16 93 22 Q92 27 84 27 L58 27 Q52 27 52 21 L52 18 L32 18 Q28 18 28 12 Q28 6 32 6 Z' fill='#a9c4e4' stroke='#5e7ba0' stroke-width='2.5' stroke-linejoin='round'/><path d='M32 9.5 L52 9.5 M32 14 L52 14' stroke='#7f9dc4' stroke-width='2.5'/></svg>`,
+      soap: `${LAYER_HEAD}<rect x='32' y='6' width='56' height='19' rx='9' fill='#7fd4c9' stroke='#48a094' stroke-width='2.5'/><ellipse cx='60' cy='12' rx='16' ry='4' fill='#b9ece6'/><circle cx='92' cy='6' r='3' fill='none' stroke='#9fd8d1' stroke-width='2'/><circle cx='99' cy='11' r='2' fill='none' stroke='#9fd8d1' stroke-width='2'/></svg>`,
+      shoe: `${LAYER_HEAD}<path d='M22 21 L22 10 Q22 6 27 6 L40 6 Q46 6 50 11 Q57 19 74 19 Q90 19 94 21 Q97 22 96 24 L24 24 Q22 24 22 21 Z' fill='#f08ca4' stroke='#b25a72' stroke-width='2.5' stroke-linejoin='round'/><rect x='20' y='23' width='78' height='4.5' rx='2.2' fill='#fff' stroke='#c9c9c9' stroke-width='1.5'/><path d='M34 10 L42 14 M32 15 L42 18' stroke='#fff' stroke-width='2' stroke-linecap='round'/></svg>`,
+      sponge: `${LAYER_HEAD}<rect x='26' y='9' width='68' height='17' rx='4' fill='#ffd94a' stroke='#d9a92e' stroke-width='2.5'/><rect x='26' y='4' width='68' height='9' rx='3' fill='#8fce6a' stroke='#549638' stroke-width='2'/><circle cx='40' cy='18' r='1.5' fill='#e3b93a'/><circle cx='58' cy='21' r='1.5' fill='#e3b93a'/><circle cx='76' cy='17' r='1.5' fill='#e3b93a'/></svg>`,
+      ball: `${LAYER_HEAD}<circle cx='60' cy='15' r='13' fill='#33333d' stroke='#17171d' stroke-width='2'/><circle cx='60' cy='10.5' r='4.8' fill='#fff'/><text x='60' y='13' text-anchor='middle' font-family='sans-serif' font-size='7' font-weight='bold' fill='#17171d'>8</text><ellipse cx='51' cy='9' rx='3' ry='2' fill='rgba(255,255,255,0.35)'/></svg>`,
+    };
 
-const IMG = {
-  charDefault: svgImage(charSvg(FACE_DEFAULT)),
-  charYum: svgImage(charSvg(FACE_YUM)),
-  charSad: svgImage(charSvg(FACE_SAD)),
-};
-for (const key of Object.keys(LAYER_SVGS)) IMG[key] = svgImage(LAYER_SVGS[key]);
+    const IMG = {
+      charDefault: svgImage(charSvg(FACE_DEFAULT)),
+      charYum: svgImage(charSvg(FACE_YUM)),
+      charSad: svgImage(charSvg(FACE_SAD)),
+    };
+    for (const key of Object.keys(LAYER_SVGS)) IMG[key] = svgImage(LAYER_SVGS[key]);
 
-// 스택 아이템 → 레이어 이미지 (재료는 코드, 함정은 trapKey)
-function layerImage(item) {
-  return IMG[item.code || item.trapKey];
-}
-
-// 이미지를 가로 중앙(cx)·밑변(bottomY) 정렬로 그림
-function drawImg(img, cx, bottomY, scale) {
-  if (!img.complete || !img.naturalWidth) return;
-  const w = img.naturalWidth * scale;
-  const h = img.naturalHeight * scale;
-  ctx.drawImage(img, cx - w / 2, bottomY - h, w, h);
-}
-
-// 현재 스택을 레이어 SVG 버거로 그림 (결과 화면에서 재사용)
-function drawBurger(cx, bottomY, layerW, step, withTop) {
-  const s = layerW / 120;
-  drawImg(IMG.bunBottom, cx, bottomY, s);
-  let y = bottomY - step;
-  for (const item of stack) {
-    drawImg(layerImage(item), cx, y, s);
-    y -= step;
-  }
-  if (withTop) drawImg(IMG.bunTop, cx, y, s);
-}
-
-// ===== 상태 =====
-const canvas = document.getElementById('game');
-const ctx = canvas.getContext('2d');
-
-// HiDPI(레티나) 대응: 백킹 스토어를 devicePixelRatio 배율로 키워 선명하게 렌더
-const DPR = Math.min(window.devicePixelRatio || 1, 2);
-canvas.width = CANVAS_W * DPR;
-canvas.height = CANVAS_H * DPR;
-canvas.style.width = CANVAS_W + 'px';
-canvas.style.height = CANVAS_H + 'px';
-ctx.scale(DPR, DPR);
-ctx.imageSmoothingQuality = 'high';
-
-let stage = null;      // 파싱된 현재 스테이지 { rows, cols, cells, startCol, startRow }
-let player = null;     // { col, row, drawX, drawY }
-let screen = 'title';  // 현재 화면: title / select / play (결과는 play 위 오버레이)
-let selectedIndex = 0; // 스테이지 선택 화면 커서
-let currentStageIndex = 0; // 플레이 중인 스테이지 인덱스
-let moveCooldown = 0;  // 다음 이동까지 남은 시간(초)
-let heldDirs = [];     // 누르고 있는 방향 키 목록 (마지막에 누른 방향 우선)
-let confirming = null; // 확인 팝업: null / 'restart' / 'exit'
-let stack = [];        // 먹은 순서대로 쌓인 스택 [{ emoji, code, trapKey, isTrap, eatenAt }]
-let lastEatAt = 0;     // 마지막 섭취 시각 (냠냠 표정용)
-let shakeUntil = 0;    // 함정 섭취 화면 흔들림 종료 시각
-let completed = false; // 주문서 재료를 전부 먹어 버거 완성됨
-let completedAt = 0;   // 완성 시각 (상단 번 연출용)
-let timeLeft = 0;      // 남은 시간(초)
-let hitAreas = [];     // 이번 프레임에 그려진 클릭 가능 영역 [{ x, y, w, h, action }]
-let failed = false;    // 타임오버 실패
-let failComment = '';  // 실패 화면 랜덤 코멘트
-let stars = 0;         // 이번 판 획득 별점 (0~3)
-
-// grid 문자열 배열 → 셀 2차원 배열로 파싱
-function parseStage(data) {
-  const rows = data.grid.length;
-  const cols = data.grid[0].length;
-  const cells = [];
-  let startCol = 1;
-  let startRow = 1;
-
-  for (let r = 0; r < rows; r++) {
-    const line = data.grid[r];
-    const rowCells = [];
-    for (let c = 0; c < cols; c++) {
-      const ch = line[c];
-      const cell = { type: 'floor', emoji: null };
-      if (ch === '#') {
-        cell.type = 'wall';
-      } else if (ch === 'S') {
-        startCol = c;
-        startRow = r;
-      } else if (ch === 'X') {
-        cell.type = 'trap';
-        cell.trapKey = TRAP_KEYS[Math.floor(Math.random() * TRAP_KEYS.length)];
-        cell.emoji = TRAPS[cell.trapKey].emoji;
-      } else if (INGREDIENTS[ch]) {
-        cell.type = 'ingredient';
-        cell.code = ch;
-        cell.emoji = INGREDIENTS[ch].emoji;
-      }
-      rowCells.push(cell);
+    // 스택 아이템 → 레이어 이미지 (재료는 코드, 함정은 trapKey)
+    function layerImage(item) {
+      return IMG[item.code || item.trapKey];
     }
-    cells.push(rowCells);
-  }
-  return { ...data, rows, cols, cells, startCol, startRow };
-}
 
-function loadStage(data) {
-  stage = parseStage(data);
-  player = {
-    col: stage.startCol,
-    row: stage.startRow,
-    drawX: stage.startCol,
-    drawY: stage.startRow,
-  };
-  moveCooldown = 0;
-  stack = [];
-  lastEatAt = 0;
-  completed = false;
-  timeLeft = stage.timeLimit;
-  failed = false;
-  failComment = '';
-  stars = 0;
-}
+    // 이미지를 가로 중앙(cx)·밑변(bottomY) 정렬로 그림
+    function drawImg(img, cx, bottomY, scale) {
+      if (!img.complete || !img.naturalWidth) return;
+      const w = img.naturalWidth * scale;
+      const h = img.naturalHeight * scale;
+      ctx.drawImage(img, cx - w / 2, bottomY - h, w, h);
+    }
 
-// ===== 진행 저장 (localStorage) =====
-function loadSave() {
-  try {
-    return JSON.parse(localStorage.getItem(SAVE_KEY)) || {};
-  } catch {
-    return {};
-  }
-}
+    // 현재 스택을 레이어 SVG 버거로 그림 (결과 화면에서 재사용)
+    function drawBurger(cx, bottomY, layerW, step, withTop) {
+      const s = layerW / 120;
+      drawImg(IMG.bunBottom, cx, bottomY, s);
+      let y = bottomY - step;
+      for (const item of stack) {
+        drawImg(layerImage(item), cx, y, s);
+        y -= step;
+      }
+      if (withTop) drawImg(IMG.bunTop, cx, y, s);
+    }
 
-function saveStars(stageId, earned) {
-  const save = loadSave();
-  save[stageId] = Math.max(save[stageId] || 0, earned);
-  localStorage.setItem(SAVE_KEY, JSON.stringify(save));
-}
+    // ===== 상태 =====
+    const canvas = document.getElementById('game');
+    const ctx = canvas.getContext('2d');
 
-// 맵을 정사각 게임 영역 중앙에 배치하기 위한 오프셋
-function mapOffset() {
-  return {
-    x: GAME_X + Math.floor((GAME_SIZE - stage.cols * CELL) / 2),
-    y: GAME_Y + Math.floor((GAME_SIZE - stage.rows * CELL) / 2),
-  };
-}
+    // HiDPI(레티나) 대응: 백킹 스토어를 devicePixelRatio 배율로 키워 선명하게 렌더
+    const DPR = Math.min(window.devicePixelRatio || 1, 2);
+    canvas.width = CANVAS_W * DPR;
+    canvas.height = CANVAS_H * DPR;
+    canvas.style.width = CANVAS_W + 'px';
+    canvas.style.height = CANVAS_H + 'px';
+    ctx.scale(DPR, DPR);
+    ctx.imageSmoothingQuality = 'high';
 
-// ===== 입력 =====
-const KEY_DIRS = {
-  ArrowUp: [0, -1], KeyW: [0, -1],
-  ArrowDown: [0, 1], KeyS: [0, 1],
-  ArrowLeft: [-1, 0], KeyA: [-1, 0],
-  ArrowRight: [1, 0], KeyD: [1, 0],
-};
+    let stage = null;      // 파싱된 현재 스테이지 { rows, cols, cells, startCol, startRow }
+    let player = null;     // { col, row, drawX, drawY }
+    let screen = 'title';  // 현재 화면: title / select / play (결과는 play 위 오버레이)
+    let selectedIndex = 0; // 스테이지 선택 화면 커서
+    let currentStageIndex = 0; // 플레이 중인 스테이지 인덱스
+    let moveCooldown = 0;  // 다음 이동까지 남은 시간(초)
+    let heldDirs = [];     // 누르고 있는 방향 키 목록 (마지막에 누른 방향 우선)
+    let confirming = null; // 확인 팝업: null / 'restart' / 'exit'
+    let stack = [];        // 먹은 순서대로 쌓인 스택 [{ emoji, code, trapKey, isTrap, eatenAt }]
+    let lastEatAt = 0;     // 마지막 섭취 시각 (냠냠 표정용)
+    let shakeUntil = 0;    // 함정 섭취 화면 흔들림 종료 시각
+    let completed = false; // 주문서 재료를 전부 먹어 버거 완성됨
+    let completedAt = 0;   // 완성 시각 (상단 번 연출용)
+    let timeLeft = 0;      // 남은 시간(초)
+    let hitAreas = [];     // 이번 프레임에 그려진 클릭 가능 영역 [{ x, y, w, h, action }]
+    let failed = false;    // 게임 오버 상태
+    let failedReason = null; // 'timeout' | 'trap'
+    let failComment = '';  // 실패 화면 랜덤 코멘트
+    let stars = 0;         // 이번 판 획득 별점 (0~3)
 
-// i번째 스테이지 잠금 해제 여부 (첫 스테이지이거나 이전 스테이지를 클리어)
-function isUnlocked(i) {
-  return i === 0 || loadSave()[STAGES[i - 1].id] !== undefined;
-}
+    // grid 문자열 배열 → 셀 2차원 배열로 파싱
+    function parseStage(data) {
+      const rows = data.grid.length;
+      const cols = data.grid[0].length;
+      const cells = [];
+      let startCol = 1;
+      let startRow = 1;
 
-function exitToSelect() {
-  screen = 'select';
-  selectedIndex = currentStageIndex;
-  heldDirs = [];
-  confirming = null;
-}
+      for (let r = 0; r < rows; r++) {
+        const line = data.grid[r];
+        const rowCells = [];
+        for (let c = 0; c < cols; c++) {
+          const ch = line[c];
+          const cell = { type: 'floor', emoji: null };
+          if (ch === '#') {
+            cell.type = 'wall';
+          } else if (ch === 'S') {
+            startCol = c;
+            startRow = r;
+          } else if (ch === 'X') {
+            cell.type = 'trap';
+            cell.trapKey = TRAP_KEYS[Math.floor(Math.random() * TRAP_KEYS.length)];
+            cell.emoji = TRAPS[cell.trapKey].emoji;
+          } else if (INGREDIENTS[ch]) {
+            cell.type = 'ingredient';
+            cell.code = ch;
+            cell.emoji = INGREDIENTS[ch].emoji;
+          }
+          rowCells.push(cell);
+        }
+        cells.push(rowCells);
+      }
+      return { ...data, rows, cols, cells, startCol, startRow };
+    }
 
-window.addEventListener('keydown', (e) => {
-  // --- 타이틀 화면 ---
-  if (screen === 'title') {
-    if (e.code === 'Enter' || e.code === 'Space') {
-      e.preventDefault();
+    function loadStage(data) {
+      stage = parseStage(data);
+      player = {
+        col: stage.startCol,
+        row: stage.startRow,
+        drawX: stage.startCol,
+        drawY: stage.startRow,
+      };
+      moveCooldown = 0;
+      stack = [];
+      lastEatAt = 0;
+      completed = false;
+      timeLeft = stage.timeLimit;
+      failed = false;
+      failedReason = null;
+      failComment = '';
+      stars = 0;
+    }
+
+    // ===== 진행 저장 (localStorage) =====
+    function loadSave() {
+      try {
+        return JSON.parse(localStorage.getItem(SAVE_KEY)) || {};
+      } catch {
+        return {};
+      }
+    }
+
+    function saveStars(stageId, earned) {
+      const save = loadSave();
+      save[stageId] = Math.max(save[stageId] || 0, earned);
+      localStorage.setItem(SAVE_KEY, JSON.stringify(save));
+    }
+
+    // 맵을 정사각 게임 영역 중앙에 배치하기 위한 오프셋
+    function mapOffset() {
+      return {
+        x: GAME_X + Math.floor((GAME_SIZE - stage.cols * CELL) / 2),
+        y: GAME_Y + Math.floor((GAME_SIZE - stage.rows * CELL) / 2),
+      };
+    }
+
+    // ===== 입력 =====
+    const KEY_DIRS = {
+      ArrowUp: [0, -1], KeyW: [0, -1],
+      ArrowDown: [0, 1], KeyS: [0, 1],
+      ArrowLeft: [-1, 0], KeyA: [-1, 0],
+      ArrowRight: [1, 0], KeyD: [1, 0],
+    };
+
+    // i번째 스테이지 잠금 해제 여부 (첫 스테이지이거나 이전 스테이지를 클리어)
+    function isUnlocked(i) {
+      return i === 0 || loadSave()[STAGES[i - 1].id] !== undefined;
+    }
+
+    function exitToSelect() {
       screen = 'select';
-    }
-    return;
-  }
-
-  // --- 스테이지 선택 화면 ---
-  if (screen === 'select') {
-    e.preventDefault();
-    if (e.code === 'ArrowLeft' || e.code === 'KeyA') {
-      selectedIndex = Math.max(0, selectedIndex - 1);
-    } else if (e.code === 'ArrowRight' || e.code === 'KeyD') {
-      selectedIndex = Math.min(STAGES.length - 1, selectedIndex + 1);
-    } else if (e.code === 'Enter' || e.code === 'Space') {
-      if (isUnlocked(selectedIndex)) {
-        currentStageIndex = selectedIndex;
-        loadStage(STAGES[currentStageIndex]);
-        screen = 'play';
-      }
-    } else if (e.code === 'Escape') {
-      screen = 'title';
-    }
-    return;
-  }
-
-  // --- 플레이 화면 ---
-  // 확인 팝업이 떠 있는 동안은 Enter(확인)/ESC(취소)만 받는다
-  if (confirming) {
-    e.preventDefault();
-    if (e.code === 'Enter') {
-      const action = confirming;
-      confirming = null;
-      if (action === 'restart') loadStage(STAGES[currentStageIndex]);
-      else exitToSelect();
-    } else if (e.code === 'Escape') {
-      confirming = null;
-    }
-    return;
-  }
-
-  // 결과(클리어/실패) 오버레이: R 즉시 재시작, ESC 선택 화면, Enter 다음 스테이지
-  if (completed || failed) {
-    if (e.code === 'KeyR') {
-      loadStage(STAGES[currentStageIndex]);
-    } else if (e.code === 'Escape') {
-      exitToSelect();
-    } else if (e.code === 'Enter' && completed && currentStageIndex + 1 < STAGES.length) {
-      currentStageIndex += 1;
-      loadStage(STAGES[currentStageIndex]);
-    }
-    return;
-  }
-
-  if (KEY_DIRS[e.code]) {
-    e.preventDefault();
-    if (!heldDirs.includes(e.code)) heldDirs.push(e.code);
-  } else if (e.code === 'KeyR') {
-    confirming = 'restart';
-    heldDirs = [];
-  } else if (e.code === 'Escape') {
-    confirming = 'exit';
-    heldDirs = [];
-  }
-});
-
-window.addEventListener('keyup', (e) => {
-  heldDirs = heldDirs.filter((code) => code !== e.code);
-});
-
-// ===== 마우스 =====
-// 커스텀 커서: 통통한 노란 화살표 (SVG 데이터 URI, 단일 파일 유지)
-const CURSOR_ARROW_SVG = `<svg xmlns='http://www.w3.org/2000/svg' width='38' height='38' viewBox='0 0 38 38'><path d='M7 3 L7 30 L14 24 L19 34 L25 31 L20 22 L29 22 Z' fill='#ffd54a' stroke='#8a6a3f' stroke-width='3' stroke-linejoin='round'/></svg>`;
-// 호버용: 통통한 장갑 손 모양 포인터
-const CURSOR_HOVER_SVG = `<svg xmlns='http://www.w3.org/2000/svg' width='40' height='40' viewBox='0 0 40 40'><path d='M15 5 Q17.5 2.5 20 5 L20.5 15 L31 17.5 Q35.5 18.5 34.5 24 L33 31 Q32 36 26.5 36 L18.5 36 Q15.5 36 13.5 33.5 L7 25.5 Q5 22.5 7.5 20.5 Q10 18.5 12.5 21 L15 23.5 Z' fill='#ffd9a0' stroke='#8a6a3f' stroke-width='2.5' stroke-linejoin='round'/><path d='M20.5 16 L20.5 24 M25.5 17 L25.5 24 M30.5 18.5 L30.5 24' fill='none' stroke='#8a6a3f' stroke-width='1.8' stroke-linecap='round'/></svg>`;
-
-function cursorCss(svg, hx, hy, fallback) {
-  return `url("data:image/svg+xml,${encodeURIComponent(svg)}") ${hx} ${hy}, ${fallback}`;
-}
-
-const CURSOR_DEFAULT = cursorCss(CURSOR_ARROW_SVG, 7, 3, 'auto');
-const CURSOR_HOVER = cursorCss(CURSOR_HOVER_SVG, 18, 3, 'pointer');
-
-let lastMouse = { x: -1, y: -1 }; // 캔버스 좌표 기준 마지막 마우스 위치
-
-function canvasPos(e) {
-  const rect = canvas.getBoundingClientRect();
-  return {
-    x: (e.clientX - rect.left) * (CANVAS_W / rect.width),
-    y: (e.clientY - rect.top) * (CANVAS_H / rect.height),
-  };
-}
-
-function hitAreaAt(x, y) {
-  // 늦게 그려진(위에 겹친) 영역 우선
-  for (let i = hitAreas.length - 1; i >= 0; i--) {
-    const a = hitAreas[i];
-    if (x >= a.x && x <= a.x + a.w && y >= a.y && y <= a.y + a.h) return a;
-  }
-  return null;
-}
-
-canvas.addEventListener('click', (e) => {
-  const { x, y } = canvasPos(e);
-  const area = hitAreaAt(x, y);
-  if (area) area.action();
-});
-
-canvas.addEventListener('mousemove', (e) => {
-  lastMouse = canvasPos(e);
-});
-
-// 화면 상태에 따라 커서 갱신 (플레이 중에는 숨김, 팝업이 뜨면 다시 표시)
-function updateCursor() {
-  const playing = screen === 'play' && !confirming && !completed && !failed;
-  if (playing) {
-    canvas.style.cursor = 'none';
-  } else {
-    canvas.style.cursor = hitAreaAt(lastMouse.x, lastMouse.y) ? CURSOR_HOVER : CURSOR_DEFAULT;
-  }
-}
-
-// 버튼을 그리고 클릭 영역으로 등록
-function drawButton(x, y, w, h, label, action) {
-  ctx.fillStyle = '#ffe9b8';
-  ctx.strokeStyle = '#e8a24c';
-  ctx.lineWidth = 3;
-  ctx.beginPath();
-  ctx.roundRect(x, y, w, h, 14);
-  ctx.fill();
-  ctx.stroke();
-
-  ctx.fillStyle = '#8a6a3f';
-  ctx.font = 'bold 18px Pretendard Variable, sans-serif';
-  ctx.textAlign = 'center';
-  fillTextVCenter(label, x + w / 2, y + h / 2);
-
-  hitAreas.push({ x, y, w, h, action });
-}
-
-// 둥근 모서리 패널 (게임 영역·좌우 정보 패널 공용)
-function drawPanel(x, y, w, h) {
-  ctx.fillStyle = '#fffdf5';
-  ctx.strokeStyle = '#e5d5ae';
-  ctx.lineWidth = 2;
-  ctx.beginPath();
-  ctx.roundRect(x, y, w, h, 14);
-  ctx.fill();
-  ctx.stroke();
-}
-
-// 좌상단 게임 로고 (선택/플레이 화면 공통)
-function renderHeader() {
-  ctx.textAlign = 'left';
-  ctx.textBaseline = 'top';
-  ctx.font = 'bold 20px Pretendard Variable, sans-serif';
-  ctx.fillStyle = '#8a6a3f';
-  ctx.fillText('🍔 Burger Game', HEADER_X, HEADER_Y);
-}
-
-// 캔버스 middle baseline은 폰트 어센트/디센트가 비대칭이라 시각적으로 위쪽에 치우쳐 보인다.
-// 실제 글리프 경계(actualBoundingBox)를 측정해 baseline을 보정하면 정확히 정중앙에 그려진다.
-function fillTextVCenter(text, cx, cy) {
-  // measureText의 actualBoundingBox 값은 호출 시점의 textBaseline 기준이므로,
-  // 측정 전에 baseline을 먼저 고정해야 offset 계산이 어긋나지 않는다.
-  ctx.textBaseline = 'alphabetic';
-  const m = ctx.measureText(text);
-  const offset = (m.actualBoundingBoxAscent - m.actualBoundingBoxDescent) / 2;
-  ctx.fillText(text, cx, cy + offset);
-}
-
-function tryMove(dc, dr) {
-  const nc = player.col + dc;
-  const nr = player.row + dr;
-  if (nr < 0 || nr >= stage.rows || nc < 0 || nc >= stage.cols) return;
-  if (stage.cells[nr][nc].type === 'wall') return;
-  player.col = nc;
-  player.row = nr;
-  moveCooldown = MOVE_INTERVAL;
-  eatCell(stage.cells[nr][nc]);
-}
-
-// 재료·함정 셀에 진입하면 즉시 섭취 (취소 불가)
-function eatCell(cell) {
-  if (cell.type !== 'ingredient' && cell.type !== 'trap') return;
-  stack.push({
-    emoji: cell.emoji,
-    code: cell.code || null,
-    trapKey: cell.trapKey || null,
-    isTrap: cell.type === 'trap',
-    eatenAt: performance.now(),
-  });
-  if (cell.type === 'trap') shakeUntil = performance.now() + TRAP_SHAKE_MS;
-  cell.type = 'floor';
-  cell.emoji = null;
-  cell.code = null;
-  cell.trapKey = null;
-  lastEatAt = performance.now();
-  checkComplete();
-}
-
-// 먹은 재료 이름 목록 (함정 제외, 먹은 순서대로)
-function eatenNames() {
-  return stack
-    .filter((item) => item.code)
-    .map((item) => INGREDIENTS[item.code].name);
-}
-
-// 주문서 재료를 전부 먹으면 자동 완성 (순서가 틀려도 완성)
-function checkComplete() {
-  const names = eatenNames();
-  if (!completed && stage.recipe.every((name) => names.includes(name))) {
-    completed = true;
-    completedAt = performance.now();
-    heldDirs = [];
-    stars = computeStars();
-    saveStars(stage.id, stars);
-  }
-}
-
-// 별점 채점: 별1 시간 내 완성 / 별2 함정 0개 / 별3 순서 정확(함정 제외)
-function computeStars() {
-  const names = eatenNames();
-  const orderOk = names.every((name, i) => name === stage.recipe[i]);
-  const noTrap = !stack.some((item) => item.isTrap);
-  return 1 + (noTrap ? 1 : 0) + (orderOk ? 1 : 0); // 완성 시 호출되므로 별1은 항상 획득
-}
-
-// ===== 게임 루프 =====
-function update(dt) {
-  if (confirming) return; // 팝업 중에는 게임 정지
-
-  // 타이머: 플레이 중에만 감소, 0이 되면 실패
-  if (!completed && !failed) {
-    timeLeft = Math.max(0, timeLeft - dt);
-    if (timeLeft === 0) {
-      failed = true;
-      failComment = FAIL_COMMENTS[Math.floor(Math.random() * FAIL_COMMENTS.length)];
+      selectedIndex = currentStageIndex;
       heldDirs = [];
-    }
-  }
-
-  moveCooldown = Math.max(0, moveCooldown - dt);
-  if (!completed && !failed && heldDirs.length > 0 && moveCooldown === 0) {
-    const [dc, dr] = KEY_DIRS[heldDirs[heldDirs.length - 1]];
-    tryMove(dc, dr);
-  }
-  // 그리기 위치를 실제 칸 위치로 부드럽게 보간
-  const t = Math.min(1, dt * LERP_SPEED);
-  player.drawX += (player.col - player.drawX) * t;
-  player.drawY += (player.row - player.drawY) * t;
-}
-
-function render() {
-  ctx.clearRect(0, 0, CANVAS_W, CANVAS_H);
-  hitAreas = []; // 매 프레임 현재 화면의 클릭 영역만 유지
-  if (screen === 'title') renderTitle();
-  else if (screen === 'select') renderSelect();
-  else renderPlay();
-}
-
-// 타이틀 화면
-function renderTitle() {
-  ctx.textAlign = 'center';
-  ctx.textBaseline = 'middle';
-
-  drawImg(IMG.charDefault, CANVAS_W / 2, CANVAS_H / 2 - 70, 1.8);
-
-  ctx.fillStyle = '#8a6a3f';
-  ctx.font = 'bold 52px Pretendard Variable, sans-serif';
-  ctx.fillText('Burger Game', CANVAS_W / 2, CANVAS_H / 2 - 20);
-
-  ctx.font = '17px Pretendard Variable, sans-serif';
-  ctx.fillStyle = '#b39a72';
-  ctx.fillText('주문서 순서대로 재료를 먹어 버거를 완성하세요!', CANVAS_W / 2, CANVAS_H / 2 + 32);
-
-  // 시작 버튼
-  drawButton((CANVAS_W - 220) / 2, CANVAS_H / 2 + 80, 220, 52, '시작 (Enter)', () => {
-    screen = 'select';
-  });
-}
-
-// 스테이지 선택 화면
-function renderSelect() {
-  const save = loadSave();
-
-  renderHeader();
-
-  ctx.textAlign = 'center';
-  ctx.textBaseline = 'middle';
-  ctx.fillStyle = '#8a6a3f';
-  ctx.font = 'bold 32px Pretendard Variable, sans-serif';
-  ctx.fillText('스테이지 선택', CANVAS_W / 2, 90);
-
-  const cardW = 150;
-  const cardH = 180;
-  const gap = 24;
-  const totalW = STAGES.length * cardW + (STAGES.length - 1) * gap;
-  const startX = (CANVAS_W - totalW) / 2;
-  const cy = CANVAS_H / 2;
-
-  for (let i = 0; i < STAGES.length; i++) {
-    const data = STAGES[i];
-    const unlocked = isUnlocked(i);
-    const selected = i === selectedIndex;
-    const x = startX + i * (cardW + gap);
-    const y = cy - cardH / 2;
-
-    // 카드
-    ctx.fillStyle = selected ? '#ffe9b8' : '#fffdf2';
-    ctx.strokeStyle = selected ? '#e8a24c' : '#e5d5ae';
-    ctx.lineWidth = selected ? 4 : 2;
-    ctx.beginPath();
-    ctx.roundRect(x, y, cardW, cardH, 16);
-    ctx.fill();
-    ctx.stroke();
-
-    ctx.globalAlpha = unlocked ? 1 : 0.45;
-
-    ctx.fillStyle = '#8a6a3f';
-    ctx.font = 'bold 44px Pretendard Variable, sans-serif';
-    ctx.fillText(String(data.id), x + cardW / 2, y + 56);
-
-    ctx.font = '15px Pretendard Variable, sans-serif';
-    ctx.fillText(unlocked ? data.name : '???', x + cardW / 2, y + 100);
-
-    // 획득 별 (클리어 기록 없으면 회색 별 3개)
-    const earned = save[data.id] || 0;
-    ctx.font = '20px serif';
-    for (let s = 0; s < 3; s++) {
-      ctx.fillStyle = s < earned ? '#f5b83d' : '#ddd0b0';
-      ctx.fillText('★', x + cardW / 2 + (s - 1) * 26, y + 140);
+      confirming = null;
     }
 
-    ctx.globalAlpha = 1;
+    window.addEventListener('keydown', (e) => {
+      // --- 타이틀 화면 ---
+      if (screen === 'title') {
+        if (e.code === 'Enter' || e.code === 'Space') {
+          e.preventDefault();
+          screen = 'select';
+        }
+        return;
+      }
 
-    if (!unlocked) {
-      ctx.font = '28px serif';
-      ctx.fillText('🔒', x + cardW / 2, y + 24);
-    } else {
-      // 잠금 해제된 카드는 클릭으로 바로 시작
-      hitAreas.push({
-        x, y, w: cardW, h: cardH,
-        action: () => {
-          selectedIndex = i;
-          currentStageIndex = i;
-          loadStage(STAGES[i]);
-          screen = 'play';
-        },
-      });
+      // --- 스테이지 선택 화면 ---
+      if (screen === 'select') {
+        e.preventDefault();
+        if (e.code === 'ArrowLeft' || e.code === 'KeyA') {
+          selectedIndex = Math.max(0, selectedIndex - 1);
+        } else if (e.code === 'ArrowRight' || e.code === 'KeyD') {
+          selectedIndex = Math.min(STAGES.length - 1, selectedIndex + 1);
+        } else if (e.code === 'Enter' || e.code === 'Space') {
+          if (isUnlocked(selectedIndex)) {
+            currentStageIndex = selectedIndex;
+            loadStage(STAGES[currentStageIndex]);
+            screen = 'play';
+          }
+        } else if (e.code === 'Escape') {
+          screen = 'title';
+        }
+        return;
+      }
+
+      // --- 플레이 화면 ---
+      // 확인 팝업이 떠 있는 동안은 Enter(확인)/ESC(취소)만 받는다
+      if (confirming) {
+        e.preventDefault();
+        if (e.code === 'Enter') {
+          const action = confirming;
+          confirming = null;
+          if (action === 'restart') loadStage(STAGES[currentStageIndex]);
+          else exitToSelect();
+        } else if (e.code === 'Escape') {
+          confirming = null;
+        }
+        return;
+      }
+
+      // 결과(클리어/실패) 오버레이: R 즉시 재시작, ESC 선택 화면, Enter 다음 스테이지
+      if (completed || failed) {
+        if (e.code === 'KeyR') {
+          loadStage(STAGES[currentStageIndex]);
+        } else if (e.code === 'Escape') {
+          exitToSelect();
+        } else if (e.code === 'Enter' && completed && currentStageIndex + 1 < STAGES.length) {
+          currentStageIndex += 1;
+          loadStage(STAGES[currentStageIndex]);
+        }
+        return;
+      }
+
+      if (KEY_DIRS[e.code]) {
+        e.preventDefault();
+        if (!heldDirs.includes(e.code)) heldDirs.push(e.code);
+      } else if (e.code === 'KeyR') {
+        confirming = 'restart';
+        heldDirs = [];
+      } else if (e.code === 'Escape') {
+        confirming = 'exit';
+        heldDirs = [];
+      }
+    });
+
+    window.addEventListener('keyup', (e) => {
+      heldDirs = heldDirs.filter((code) => code !== e.code);
+    });
+
+    // ===== 마우스 =====
+    // 커스텀 커서: 통통한 노란 화살표 (SVG 데이터 URI, 단일 파일 유지)
+    const CURSOR_ARROW_SVG = `<svg xmlns='http://www.w3.org/2000/svg' width='38' height='38' viewBox='0 0 38 38'><path d='M7 3 L7 30 L14 24 L19 34 L25 31 L20 22 L29 22 Z' fill='#ffd54a' stroke='#8a6a3f' stroke-width='3' stroke-linejoin='round'/></svg>`;
+    // 호버용: 통통한 장갑 손 모양 포인터
+    const CURSOR_HOVER_SVG = `<svg xmlns='http://www.w3.org/2000/svg' width='40' height='40' viewBox='0 0 40 40'><path d='M15 5 Q17.5 2.5 20 5 L20.5 15 L31 17.5 Q35.5 18.5 34.5 24 L33 31 Q32 36 26.5 36 L18.5 36 Q15.5 36 13.5 33.5 L7 25.5 Q5 22.5 7.5 20.5 Q10 18.5 12.5 21 L15 23.5 Z' fill='#ffd9a0' stroke='#8a6a3f' stroke-width='2.5' stroke-linejoin='round'/><path d='M20.5 16 L20.5 24 M25.5 17 L25.5 24 M30.5 18.5 L30.5 24' fill='none' stroke='#8a6a3f' stroke-width='1.8' stroke-linecap='round'/></svg>`;
+
+    function cursorCss(svg, hx, hy, fallback) {
+      return `url("data:image/svg+xml,${encodeURIComponent(svg)}") ${hx} ${hy}, ${fallback}`;
     }
-  }
 
-  ctx.font = '15px Pretendard Variable, sans-serif';
-  ctx.fillStyle = '#b39a72';
-  ctx.fillText('← → 선택 · Enter 시작 · ESC 타이틀로', CANVAS_W / 2, CANVAS_H - 60);
-}
+    const CURSOR_DEFAULT = cursorCss(CURSOR_ARROW_SVG, 7, 3, 'auto');
+    const CURSOR_HOVER = cursorCss(CURSOR_HOVER_SVG, 18, 3, 'pointer');
 
-// 플레이 화면
-function renderPlay() {
-  const { x: ox, y: oy } = mapOffset();
+    let lastMouse = { x: -1, y: -1 }; // 캔버스 좌표 기준 마지막 마우스 위치
 
-  renderHeader();
+    function canvasPos(e) {
+      const rect = canvas.getBoundingClientRect();
+      return {
+        x: (e.clientX - rect.left) * (CANVAS_W / rect.width),
+        y: (e.clientY - rect.top) * (CANVAS_H / rect.height),
+      };
+    }
 
-  // 스테이지 이름 (로고와 같은 상단 라인, 중앙 정렬)
-  ctx.font = 'bold 17px Pretendard Variable, sans-serif';
-  ctx.fillStyle = '#a3854f';
-  ctx.textAlign = 'center';
-  ctx.textBaseline = 'top';
-  ctx.fillText(`Stage ${stage.id} — ${stage.name}`, CANVAS_W / 2, 24);
+    function hitAreaAt(x, y) {
+      // 늦게 그려진(위에 겹친) 영역 우선
+      for (let i = hitAreas.length - 1; i >= 0; i--) {
+        const a = hitAreas[i];
+        if (x >= a.x && x <= a.x + a.w && y >= a.y && y <= a.y + a.h) return a;
+      }
+      return null;
+    }
 
-  renderTimeBar();
-  renderOrder();
-  renderStack();
+    canvas.addEventListener('click', (e) => {
+      const { x, y } = canvasPos(e);
+      const area = hitAreaAt(x, y);
+      if (area) area.action();
+    });
 
-  // 함정을 먹으면 게임 영역이 잠깐 흔들린다
-  ctx.save();
-  if (performance.now() < shakeUntil) {
-    ctx.translate((Math.random() * 2 - 1) * 3, (Math.random() * 2 - 1) * 3);
-  }
+    canvas.addEventListener('mousemove', (e) => {
+      lastMouse = canvasPos(e);
+      const area = hitAreaAt(lastMouse.x, lastMouse.y);
+      if (area && area.hoverAction) {
+        area.hoverAction();
+      }
+    });
 
-  // 정사각 게임 영역 패널
-  drawPanel(GAME_X - 10, GAME_Y - 10, GAME_SIZE + 20, GAME_SIZE + 20);
-
-  // 맵 바닥 + 셀
-  for (let r = 0; r < stage.rows; r++) {
-    for (let c = 0; c < stage.cols; c++) {
-      const cell = stage.cells[r][c];
-      const px = ox + c * CELL;
-      const py = oy + r * CELL;
-
-      if (cell.type === 'wall') {
-        ctx.fillStyle = '#7d5a38';
+    // 화면 상태에 따라 커서 갱신 (플레이 중에는 숨김, 팝업이 뜨면 다시 표시)
+    function updateCursor() {
+      const playing = screen === 'play' && !confirming && !completed && !failed;
+      if (playing) {
+        canvas.style.cursor = 'none';
       } else {
-        ctx.fillStyle = (r + c) % 2 === 0 ? '#fffdf2' : '#faf1d8';
-      }
-      ctx.fillRect(px, py, CELL, CELL);
-
-      if (cell.emoji) {
-        ctx.font = '30px serif';
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        ctx.fillText(cell.emoji, px + CELL / 2, py + CELL / 2 + 2);
+        canvas.style.cursor = hitAreaAt(lastMouse.x, lastMouse.y) ? CURSOR_HOVER : CURSOR_DEFAULT;
       }
     }
-  }
 
-  // 맵 테두리
-  ctx.strokeStyle = '#d8b98c';
-  ctx.lineWidth = 3;
-  ctx.strokeRect(ox - 1.5, oy - 1.5, stage.cols * CELL + 3, stage.rows * CELL + 3);
+    // 버튼을 그리고 클릭 영역으로 등록
+    function drawButton(x, y, w, h, label, action) {
+      const hovered = lastMouse.x >= x && lastMouse.x <= x + w
+        && lastMouse.y >= y && lastMouse.y <= y + h;
 
-  // 캐릭터 (SVG, 상황별 표정)
-  const pcx = ox + player.drawX * CELL + CELL / 2;
-  const pcy = oy + player.drawY * CELL + CELL / 2;
-  const sinceEat = performance.now() - lastEatAt;
-  let charImg = IMG.charDefault;
-  if (failed) charImg = IMG.charSad;
-  else if (sinceEat < YUM_MS) charImg = IMG.charYum;
-  // 섭취 직후 살짝 부풀었다 돌아오는 냠냠 연출
-  const pop = sinceEat < YUM_MS ? 1 + 0.14 * (1 - sinceEat / YUM_MS) : 1;
-  const size = 46 * pop;
-  if (charImg.complete && charImg.naturalWidth) {
-    ctx.drawImage(charImg, pcx - size / 2, pcy - size / 2, size, size);
-  }
+      const push = hovered ? 4 : 0; // 호버 시 버튼이 눌리는 깊이
+      const radius = h / 2;         // 완전한 둥근 알약(pill) 형태
 
-  ctx.restore(); // 흔들림은 게임 영역에만 적용
+      // 버튼 하단 그림자 (3D 깊이)
+      ctx.fillStyle = hovered ? '#e0b88f' : COLORS.accentBorder;
+      ctx.beginPath();
+      ctx.roundRect(x, y + 4, w, h, radius);
+      ctx.fill();
 
-  // 하단 조작 안내
-  ctx.font = '15px Pretendard Variable, sans-serif';
-  ctx.fillStyle = '#b39a72';
-  ctx.textAlign = 'center';
-  ctx.textBaseline = 'top';
-  ctx.fillText('이동: 방향키 / WASD · R: 재시작 · ESC: 스테이지 선택', CANVAS_W / 2, CANVAS_H - 60);
-
-  // 클리어 팝업 (위쪽 번 착지 연출이 끝난 뒤 표시)
-  if (completed && performance.now() - completedAt > CLEAR_POPUP_DELAY_MS) {
-    renderClearPopup();
-  }
-  if (failed) renderFailPopup();
-
-  if (confirming) renderConfirmPopup();
-}
-
-// 상단 남은 시간 바 (게임 영역 위)
-function renderTimeBar() {
-  const barW = GAME_SIZE - 64;
-  const barH = 12;
-  const bx = GAME_X;
-  const by = 60;
-  const ratio = timeLeft / stage.timeLimit;
-
-  ctx.fillStyle = '#f0e6c8';
-  ctx.beginPath();
-  ctx.roundRect(bx, by, barW, barH, barH / 2);
-  ctx.fill();
-
-  if (ratio > 0) {
-    // 남은 비율에 따라 초록 → 주황 → 빨강, 20% 이하에서는 깜빡이며 경고
-    ctx.fillStyle = ratio > 0.5 ? '#8fc97a' : ratio > 0.2 ? '#e8a24c' : '#e06c5a';
-    if (ratio <= 0.2 && !completed && !failed) {
-      ctx.globalAlpha = 0.55 + 0.45 * Math.abs(Math.sin(performance.now() / 180));
-    }
-    ctx.beginPath();
-    ctx.roundRect(bx, by, barW * ratio, barH, barH / 2);
-    ctx.fill();
-    ctx.globalAlpha = 1;
-  }
-
-  ctx.fillStyle = '#8a6a3f';
-  ctx.font = 'bold 14px Pretendard Variable, sans-serif';
-  ctx.textAlign = 'left';
-  ctx.textBaseline = 'middle';
-  ctx.fillText(`${Math.ceil(timeLeft)}s`, bx + barW + 12, by + barH / 2);
-}
-
-// 좌측 주문서 패널: 레시피 순서 표시, 다음에 먹을 재료 하이라이트
-function renderOrder() {
-  drawPanel(SIDE_L_X, GAME_Y - 10, SIDE_W, GAME_SIZE + 20);
-  const panelCx = SIDE_L_X + SIDE_W / 2;
-  const names = eatenNames();
-  // 다음에 먹을 재료 = 주문서에서 아직 안 먹은 첫 재료
-  const nextName = stage.recipe.find((name) => !names.includes(name));
-
-  ctx.textAlign = 'center';
-  ctx.textBaseline = 'middle';
-  ctx.font = 'bold 18px Pretendard Variable, sans-serif';
-  ctx.fillStyle = '#8a6a3f';
-  ctx.fillText('주문서', panelCx, GAME_Y + 18);
-
-  for (let i = 0; i < stage.recipe.length; i++) {
-    const name = stage.recipe[i];
-    const code = Object.keys(INGREDIENTS).find((k) => INGREDIENTS[k].name === name);
-    const eaten = names.includes(name);
-    const y = GAME_Y + 62 + i * 44;
-
-    // 다음에 먹을 재료 하이라이트
-    if (name === nextName) {
-      ctx.fillStyle = '#ffe9b8';
-      ctx.strokeStyle = '#e8a24c';
+      // 버튼 윗면
+      ctx.fillStyle = hovered ? '#ffeed0' : COLORS.accentSoft;
+      ctx.strokeStyle = hovered ? COLORS.accent : COLORS.accentBorder;
       ctx.lineWidth = 2;
       ctx.beginPath();
-      ctx.roundRect(panelCx - 70, y - 19, 140, 38, 10);
+      ctx.roundRect(x, y + push, w, h, radius);
       ctx.fill();
       ctx.stroke();
+
+      // 버튼 텍스트
+      ctx.fillStyle = COLORS.text;
+      ctx.font = 'bold 18px Pretendard Variable, sans-serif';
+      ctx.textAlign = 'center';
+      fillTextVCenter(label, x + w / 2, y + push + h / 2);
+
+      hitAreas.push({ x, y, w, h, action });
     }
 
-    ctx.globalAlpha = eaten ? 0.35 : 1;
-    ctx.font = '15px Pretendard Variable, sans-serif';
-    ctx.fillStyle = '#8a6a3f';
-    ctx.textAlign = 'right';
-    ctx.fillText(`${i + 1}.`, panelCx - 34, y);
-    ctx.font = '26px serif';
-    ctx.textAlign = 'center';
-    ctx.fillText(INGREDIENTS[code].emoji, panelCx, y);
-    ctx.globalAlpha = 1;
+    // 둥근 모서리 패널 (게임 영역·좌우 정보 패널 공용)
+    function drawPanel(x, y, w, h) {
+      ctx.shadowColor = 'rgba(120, 100, 80, 0.2)';
+      ctx.shadowBlur = 16;
+      ctx.shadowOffsetY = 4;
+      ctx.fillStyle = COLORS.panel;
+      ctx.beginPath();
+      ctx.roundRect(x, y, w, h, 16);
+      ctx.fill();
 
-    // 먹은 재료 체크 표시
-    if (eaten) {
+      ctx.shadowColor = 'transparent';
+      ctx.shadowBlur = 0;
+      ctx.shadowOffsetY = 0;
+    }
+
+
+    // 캔버스 middle baseline은 폰트 어센트/디센트가 비대칭이라 시각적으로 위쪽에 치우쳐 보인다.
+    // 실제 글리프 경계(actualBoundingBox)를 측정해 baseline을 보정하면 정확히 정중앙에 그려진다.
+    function fillTextVCenter(text, cx, cy) {
+      // measureText의 actualBoundingBox 값은 호출 시점의 textBaseline 기준이므로,
+      // 측정 전에 baseline을 먼저 고정해야 offset 계산이 어긋나지 않는다.
+      ctx.textBaseline = 'alphabetic';
+      const m = ctx.measureText(text);
+      const offset = (m.actualBoundingBoxAscent - m.actualBoundingBoxDescent) / 2;
+      ctx.fillText(text, cx, cy + offset);
+    }
+
+    function tryMove(dc, dr) {
+      const nc = player.col + dc;
+      const nr = player.row + dr;
+      if (nr < 0 || nr >= stage.rows || nc < 0 || nc >= stage.cols) return;
+      if (stage.cells[nr][nc].type === 'wall') return;
+      player.col = nc;
+      player.row = nr;
+      moveCooldown = MOVE_INTERVAL;
+      eatCell(stage.cells[nr][nc]);
+    }
+
+    // 재료·함정 셀에 진입하면 즉시 섭취 (취소 불가)
+    function eatCell(cell) {
+      if (cell.type !== 'ingredient' && cell.type !== 'trap') return;
+      stack.push({
+        emoji: cell.emoji,
+        code: cell.code || null,
+        trapKey: cell.trapKey || null,
+        isTrap: cell.type === 'trap',
+        eatenAt: performance.now(),
+      });
+      if (cell.type === 'trap') shakeUntil = performance.now() + TRAP_SHAKE_MS;
+      cell.type = 'floor';
+      cell.emoji = null;
+      cell.code = null;
+      cell.trapKey = null;
+      lastEatAt = performance.now();
+
+      const trapCount = stack.filter(item => item.isTrap).length;
+      if (trapCount >= 3) {
+        failed = true;
+        failedReason = 'trap';
+        failComment = FAIL_COMMENTS_TRAP[Math.floor(Math.random() * FAIL_COMMENTS_TRAP.length)];
+        heldDirs = [];
+        return;
+      }
+
+      checkComplete();
+    }
+
+    // 먹은 재료 이름 목록 (함정 제외, 먹은 순서대로)
+    function eatenNames() {
+      return stack
+        .filter((item) => item.code)
+        .map((item) => INGREDIENTS[item.code].name);
+    }
+
+    // 주문서 재료를 전부 먹으면 자동 완성 (순서가 틀려도 완성)
+    function checkComplete() {
+      const names = eatenNames();
+      if (!completed && stage.recipe.every((name) => names.includes(name))) {
+        completed = true;
+        completedAt = performance.now();
+        heldDirs = [];
+        stars = computeStars();
+        saveStars(stage.id, stars);
+      }
+    }
+
+    // 별점 채점: 별1 시간 내 완성 / 별2 함정 0개 / 별3 순서 정확(함정 제외)
+    function computeStars() {
+      const names = eatenNames();
+      const orderOk = names.every((name, i) => name === stage.recipe[i]);
+      const noTrap = !stack.some((item) => item.isTrap);
+      return 1 + (noTrap ? 1 : 0) + (orderOk ? 1 : 0); // 완성 시 호출되므로 별1은 항상 획득
+    }
+
+    // ===== 게임 루프 =====
+    function update(dt) {
+      if (confirming) return; // 팝업 중에는 게임 정지
+
+      // 타이머: 플레이 중에만 감소, 0이 되면 실패
+      if (!completed && !failed) {
+        timeLeft = Math.max(0, timeLeft - dt);
+        if (timeLeft === 0) {
+          failed = true;
+          failedReason = 'timeout';
+          failComment = FAIL_COMMENTS_TIMEOUT[Math.floor(Math.random() * FAIL_COMMENTS_TIMEOUT.length)];
+          heldDirs = [];
+        }
+      }
+
+      moveCooldown = Math.max(0, moveCooldown - dt);
+      if (!completed && !failed && heldDirs.length > 0 && moveCooldown === 0) {
+        const [dc, dr] = KEY_DIRS[heldDirs[heldDirs.length - 1]];
+        tryMove(dc, dr);
+      }
+      // 그리기 위치를 실제 칸 위치로 부드럽게 보간
+      const t = Math.min(1, dt * LERP_SPEED);
+      player.drawX += (player.col - player.drawX) * t;
+      player.drawY += (player.row - player.drawY) * t;
+    }
+
+    function render() {
+      ctx.clearRect(0, 0, CANVAS_W, CANVAS_H);
+      hitAreas = []; // 매 프레임 현재 화면의 클릭 영역만 유지
+      if (screen === 'title') renderTitle();
+      else if (screen === 'select') renderSelect();
+      else renderPlay();
+    }
+
+    // 타이틀 화면
+    function renderTitle() {
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+
+      // 전체적으로 20px 내려서 시각적 중앙 맞춤
+      const cy = CANVAS_H / 2 + 20;
+
+      // 캐릭터 뒤에 부드러운 후광 효과 (햄버거 위치에 맞춰 Y 좌표 이동)
+      const glow = ctx.createRadialGradient(CANVAS_W / 2, cy - 75, 0, CANVAS_W / 2, cy - 75, 160);
+      glow.addColorStop(0, 'rgba(255, 255, 255, 0.8)');
+      glow.addColorStop(1, 'rgba(255, 255, 255, 0)');
+      ctx.fillStyle = glow;
+      ctx.fillRect(CANVAS_W / 2 - 160, cy - 235, 320, 320);
+
+      // 캐릭터 상하로 둥둥 떠다니는 애니메이션 (햄버거 위치 하향 조정)
+      const floatY = Math.sin(performance.now() / 400) * 8;
+      drawImg(IMG.charDefault, CANVAS_W / 2, cy - 85 + floatY, 2.4);
+
+      // 타이틀 텍스트 (그림자로 입체감)
+      ctx.shadowColor = 'rgba(120, 100, 80, 0.25)';
+      ctx.shadowBlur = 10;
+      ctx.shadowOffsetY = 4;
+      ctx.fillStyle = COLORS.text;
+      ctx.font = 'bold 56px Pretendard Variable, sans-serif';
+      ctx.fillText('Burger Game', CANVAS_W / 2, cy - 10);
+
+      // 그림자 초기화
+      ctx.shadowColor = 'transparent';
+      ctx.shadowBlur = 0;
+      ctx.shadowOffsetY = 0;
+
       ctx.font = '16px Pretendard Variable, sans-serif';
-      ctx.fillStyle = '#7fa96e';
-      ctx.fillText('✓', panelCx + 44, y);
+      ctx.fillStyle = COLORS.textSub;
+      ctx.fillText('주문서 순서대로 재료를 먹어 버거를 완성하세요!', CANVAS_W / 2, cy + 42);
+
+      // 시작 버튼 (살짝 더 크고 둥글게)
+      drawButton((CANVAS_W - 220) / 2, cy + 86, 220, 52, '시작 (Enter)', () => {
+        screen = 'select';
+      });
+
+      // 하단 조작 힌트
+      ctx.font = '14px Pretendard Variable, sans-serif';
+      ctx.fillStyle = COLORS.textSub;
+      ctx.fillText('이동: 방향키 or WASD', CANVAS_W / 2, CANVAS_H - 40);
     }
-  }
-}
 
-// 실패 팝업: 미완성 버거를 가운데, 그 아래 텍스트·랜덤 코멘트·버튼
-function renderFailPopup() {
-  overlayGameArea();
+    // 스테이지 선택 화면
+    function renderSelect() {
+      const save = loadSave();
 
-  const cx = CANVAS_W / 2;
-  // 미완성 버거 (위쪽 번 없음)
-  const step = Math.min(14, 170 / (stack.length + 2));
-  drawBurger(cx, GAME_Y + 200, 96, step, false);
+      // 제목 그림자
+      ctx.shadowColor = 'rgba(120, 100, 80, 0.2)';
+      ctx.shadowBlur = 8;
+      ctx.shadowOffsetY = 2;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillStyle = COLORS.text;
+      ctx.font = 'bold 28px Pretendard Variable, sans-serif'; // 글씨 크기 줄임
+      ctx.fillText('스테이지 선택', CANVAS_W / 2, 180); // 전체 화면 중앙에 오도록 Y 위치 내림
 
-  ctx.textAlign = 'center';
-  ctx.textBaseline = 'middle';
-  ctx.fillStyle = '#fff9e6';
-  ctx.font = 'bold 28px Pretendard Variable, sans-serif';
-  ctx.fillText('시간 초과... ⏰', cx, GAME_Y + 240);
+      ctx.shadowColor = 'transparent';
+      ctx.shadowBlur = 0;
+      ctx.shadowOffsetY = 0;
 
-  ctx.font = '17px Pretendard Variable, sans-serif';
-  ctx.fillStyle = '#ffd9a0';
-  ctx.fillText(`"${failComment}"`, cx, GAME_Y + 280);
+      const cardW = 140; // 카드 크기 줄임
+      const cardH = 170;
+      const gap = 20;
+      const totalW = STAGES.length * cardW + (STAGES.length - 1) * gap;
+      const startX = (CANVAS_W - totalW) / 2;
+      const cy = CANVAS_H / 2 + 40; // 텍스트와 카드 사이 갭을 줄이고, 전체를 중앙으로 배치
 
-  renderResultButtons(GAME_Y + 316);
-}
+      // 카드 뒤에 부드러운 배경 글로우
+      const glow = ctx.createRadialGradient(CANVAS_W / 2, cy, 0, CANVAS_W / 2, cy, 300);
+      glow.addColorStop(0, 'rgba(255, 255, 255, 0.7)');
+      glow.addColorStop(1, 'rgba(255, 255, 255, 0)');
+      ctx.fillStyle = glow;
+      ctx.fillRect(CANVAS_W / 2 - 300, cy - 150, 600, 300);
 
-// 우측 버거 스택 패널 (아래 → 위, 레이어형 SVG)
-function renderStack() {
-  drawPanel(SIDE_R_X, GAME_Y - 10, SIDE_W, GAME_SIZE + 20);
-  const panelCx = SIDE_R_X + SIDE_W / 2;
-  const baseY = GAME_Y + GAME_SIZE - 14;
-  const now = performance.now();
-  const s = STACK_LAYER_W / 120;
+      for (let i = 0; i < STAGES.length; i++) {
+        const data = STAGES[i];
+        const unlocked = isUnlocked(i);
+        const selected = i === selectedIndex;
+        const x = startX + i * (cardW + gap);
 
-  ctx.textAlign = 'center';
-  ctx.textBaseline = 'middle';
-  ctx.font = 'bold 18px Pretendard Variable, sans-serif';
-  ctx.fillStyle = '#8a6a3f';
-  ctx.fillText('버거 스택', panelCx, GAME_Y + 18);
+        // 마우스 호버 여부 확인
+        const hovered = lastMouse.x >= x && lastMouse.x <= x + cardW &&
+          lastMouse.y >= cy - cardH / 2 && lastMouse.y <= cy + cardH / 2;
 
-  // 아래 번 (시작 상태)
-  drawImg(IMG.bunBottom, panelCx, baseY, s);
+        // 잠금 해제된 카드에 마우스를 올렸거나, 키보드로 선택했을 때 시각적 하이라이트 적용
+        const isHighlighted = (hovered || selected) && unlocked;
 
-  // 먹은 순서대로 위로 쌓기
-  for (let i = 0; i < stack.length; i++) {
-    const item = stack[i];
-    const t = Math.min(1, (now - item.eatenAt) / EAT_POP_MS);
-    const drop = (1 - easeOutBack(t)) * 26; // 위에서 떨어져 통통 튀며 안착
-    drawImg(layerImage(item), panelCx, baseY - STACK_STEP * (i + 1) - drop, s);
-  }
+        // 둥둥 뜨는 효과
+        const floatY = isHighlighted ? Math.sin(performance.now() / 300) * 6 - 8 : 0;
+        const cardY = cy - cardH / 2 + floatY;
 
-  // 위쪽 번: 평소엔 패널 맨 위에 떠 있고, 완성되면 스택 위로 떨어져 덮는다
-  const floatY = GAME_Y + 92;
-  let bunY = floatY;
-  if (completed) {
-    const t = Math.min(1, (now - completedAt) / BUN_FALL_MS);
-    const targetY = baseY - STACK_STEP * (stack.length + 1);
-    bunY = floatY + (targetY - floatY) * t * t; // 가속하며 낙하
-  }
-  drawImg(IMG.bunTop, panelCx, bunY, s);
-}
+        // 선택된 카드 그림자 (바닥에 넓게 퍼짐)
+        if (isHighlighted) {
+          ctx.shadowColor = 'rgba(180, 140, 100, 0.25)';
+          ctx.shadowBlur = 16;
+          ctx.shadowOffsetY = 8;
+        }
 
-// 게임 영역만 덮는 반투명 오버레이
-function overlayGameArea() {
-  ctx.fillStyle = 'rgba(90, 68, 38, 0.78)';
-  ctx.beginPath();
-  ctx.roundRect(GAME_X - 10, GAME_Y - 10, GAME_SIZE + 20, GAME_SIZE + 20, 14);
-  ctx.fill();
-}
+        // 카드 3D 하단부 (버튼처럼 깊이감)
+        ctx.fillStyle = isHighlighted ? '#e0b88f' : COLORS.panelBorder;
+        ctx.beginPath();
+        ctx.roundRect(x, cardY + 6, cardW, cardH, 20);
+        ctx.fill();
 
-// 클리어 팝업: 완성 버거를 가운데, 그 아래 텍스트·별점·버튼
-function renderClearPopup() {
-  overlayGameArea();
+        // 카드 윗면
+        ctx.fillStyle = isHighlighted ? COLORS.highlight : COLORS.panel;
+        ctx.strokeStyle = isHighlighted ? COLORS.accent : COLORS.panelBorder;
+        ctx.lineWidth = isHighlighted ? 3 : 2;
+        ctx.beginPath();
+        ctx.roundRect(x, cardY, cardW, cardH, 20);
+        ctx.fill();
+        ctx.stroke();
 
-  const cx = CANVAS_W / 2;
-  // 완성 버거 (스택이 높으면 층 간격을 줄여 영역 안에 들어오게)
-  const step = Math.min(14, 170 / (stack.length + 2));
-  drawBurger(cx, GAME_Y + 200, 96, step, true);
+        // 그림자 리셋
+        ctx.shadowColor = 'transparent';
+        ctx.shadowBlur = 0;
+        ctx.shadowOffsetY = 0;
 
-  ctx.textAlign = 'center';
-  ctx.textBaseline = 'middle';
-  ctx.fillStyle = '#fff9e6';
-  ctx.font = 'bold 28px Pretendard Variable, sans-serif';
-  ctx.fillText('버거 완성! 🎉', cx, GAME_Y + 240);
+        ctx.globalAlpha = unlocked ? 1 : 0.45;
 
-  // 별점: 하나씩 통통 튀며 등장 (획득 별은 노란색, 나머지는 흐리게)
-  const starGap = 52;
-  const popupAge = performance.now() - completedAt - CLEAR_POPUP_DELAY_MS;
-  for (let i = 0; i < 3; i++) {
-    const st = Math.min(1, Math.max(0, (popupAge - i * 200) / 280));
-    if (st === 0) continue;
-    ctx.font = `${Math.max(1, Math.round(36 * easeOutBack(st)))}px serif`;
-    ctx.fillStyle = i < stars ? '#ffd54a' : 'rgba(255, 249, 230, 0.25)';
-    ctx.fillText('★', cx + (i - 1) * starGap, GAME_Y + 286);
-  }
+        ctx.fillStyle = COLORS.text;
+        ctx.font = 'bold 44px Pretendard Variable, sans-serif'; // 숫자 폰트 크기 조절
+        ctx.fillText(String(data.id), x + cardW / 2, cardY + 54);
 
-  const hasNext = currentStageIndex + 1 < STAGES.length;
-  let rowY = GAME_Y + 316;
-  if (hasNext) {
-    drawButton(cx - 120, rowY, 240, 42, '다음 스테이지 (Enter)', () => {
-      currentStageIndex += 1;
-      loadStage(STAGES[currentStageIndex]);
-    });
-    rowY += 52;
-  }
-  renderResultButtons(rowY);
-}
+        ctx.font = '15px Pretendard Variable, sans-serif';
+        ctx.fillText(unlocked ? data.name : '???', x + cardW / 2, cardY + 96);
 
-// 결과 화면 공통 버튼: 다시 하기(R) · 스테이지 선택(ESC)
-function renderResultButtons(y) {
-  drawButton(CANVAS_W / 2 - 185, y, 175, 42, '다시 하기 (R)', () => {
-    loadStage(STAGES[currentStageIndex]);
-  });
-  drawButton(CANVAS_W / 2 + 10, y, 175, 42, '스테이지 선택 (ESC)', () => {
-    exitToSelect();
-  });
-}
+        // 획득 별 (클리어 기록 없으면 회색 별 3개)
+        const earned = save[data.id] || 0;
+        ctx.font = '18px serif'; // 별 크기 조절
+        for (let s = 0; s < 3; s++) {
+          ctx.fillStyle = s < earned ? COLORS.star : COLORS.starEmpty;
+          ctx.fillText('★', x + cardW / 2 + (s - 1) * 24, cardY + 134);
+        }
 
-function renderConfirmPopup() {
-  // 반투명 배경
-  ctx.fillStyle = 'rgba(60, 45, 25, 0.45)';
-  ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
+        ctx.globalAlpha = 1;
 
-  // 팝업 박스
-  const boxW = 420;
-  const boxH = 160;
-  const bx = (CANVAS_W - boxW) / 2;
-  const by = (CANVAS_H - boxH) / 2;
-  ctx.fillStyle = '#fff9e6';
-  ctx.strokeStyle = '#d8b98c';
-  ctx.lineWidth = 3;
-  ctx.beginPath();
-  ctx.roundRect(bx, by, boxW, boxH, 16);
-  ctx.fill();
-  ctx.stroke();
+        if (!unlocked) {
+          ctx.font = '28px serif';
+          ctx.fillText('🔒', x + cardW / 2, cardY + 24);
+        } else {
+          // 잠금 해제된 카드는 클릭으로 바로 시작 (마우스 호버 시 포커스 동기화)
+          hitAreas.push({
+            x, y: cardY, w: cardW, h: cardH,
+            action: () => {
+              selectedIndex = i;
+              currentStageIndex = i;
+              loadStage(STAGES[i]);
+              screen = 'play';
+            },
+            hoverAction: () => {
+              if (selectedIndex !== i) {
+                selectedIndex = i; // 마우스가 올라가면 키보드 포커스도 해당 카드로 이동
+              }
+            }
+          });
+        }
+      }
 
-  ctx.fillStyle = '#8a6a3f';
-  ctx.font = 'bold 22px Pretendard Variable, sans-serif';
-  ctx.textAlign = 'center';
-  ctx.textBaseline = 'middle';
-  const msg = confirming === 'restart' ? '다시 시작할까요?' : '스테이지 선택으로 나갈까요?';
-  ctx.fillText(msg, CANVAS_W / 2, by + 52);
+      ctx.font = '14px Pretendard Variable, sans-serif';
+      ctx.fillStyle = COLORS.textSub;
+      ctx.fillText('선택: ← → | 시작: Enter | 타이틀로: ESC', CANVAS_W / 2, CANVAS_H - 40);
+    }
 
-  drawButton(CANVAS_W / 2 - 160, by + 92, 150, 42, '확인 (Enter)', () => {
-    const action = confirming;
-    confirming = null;
-    if (action === 'restart') loadStage(STAGES[currentStageIndex]);
-    else exitToSelect();
-  });
-  drawButton(CANVAS_W / 2 + 10, by + 92, 150, 42, '취소 (ESC)', () => {
-    confirming = null;
-  });
-}
+    // 플레이 화면
+    function renderPlay() {
+      const { x: ox, y: oy } = mapOffset();
 
-let lastTime = performance.now();
-function frame(now) {
-  const dt = Math.min(0.1, (now - lastTime) / 1000);
-  lastTime = now;
-  if (screen === 'play') update(dt);
-  render();
-  updateCursor();
-  requestAnimationFrame(frame);
-}
+      // 스테이지 이름 (중앙 정렬)
+      ctx.font = 'bold 22px Pretendard Variable, sans-serif'; // 글씨 크기 키움
+      ctx.fillStyle = COLORS.textSub;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'top';
+      ctx.fillText(`Stage ${stage.id} — ${stage.name}`, CANVAS_W / 2, 40);
 
-requestAnimationFrame(frame);
-</script>
+      renderTimeBar();
+      renderOrder();
+      renderStack();
+
+      // 함정을 먹으면 게임 영역이 잠깐 흔들린다
+      ctx.save();
+      if (performance.now() < shakeUntil) {
+        ctx.translate((Math.random() * 2 - 1) * 3, (Math.random() * 2 - 1) * 3);
+      }
+
+      // 정사각 게임 영역 패널 (라인 박스 제거)
+      // drawPanel(GAME_X - 10, GAME_Y - 10, GAME_SIZE + 20, GAME_SIZE + 20);
+
+      const mw = stage.cols * CELL;
+      const mh = stage.rows * CELL;
+
+      // 맵 테두리 (Outer shadow & Border radius)
+      ctx.save();
+      ctx.shadowColor = 'rgba(120, 100, 80, 0.2)';
+      ctx.shadowBlur = 16;
+      ctx.shadowOffsetY = 4;
+      ctx.fillStyle = COLORS.floorLight;
+      ctx.beginPath();
+      ctx.roundRect(ox, oy, mw, mh, 16);
+      ctx.fill();
+
+      ctx.shadowColor = 'transparent';
+      ctx.shadowBlur = 0;
+      ctx.shadowOffsetY = 0;
+
+      // 둥근 테두리 안쪽으로 클리핑
+      ctx.clip();
+
+      // 맵 바닥 + 셀
+      for (let r = 0; r < stage.rows; r++) {
+        for (let c = 0; c < stage.cols; c++) {
+          const cell = stage.cells[r][c];
+          const px = ox + c * CELL;
+          const py = oy + r * CELL;
+
+          if (cell.type === 'wall') {
+            ctx.fillStyle = COLORS.wall;
+            ctx.fillRect(px, py, CELL, CELL);
+            // 벽 상단/좌측 하이라이트 (입체감)
+            ctx.fillStyle = COLORS.wallHighlight;
+            ctx.fillRect(px, py, CELL, 2);
+            ctx.fillRect(px, py, 2, CELL);
+          } else {
+            ctx.fillStyle = (r + c) % 2 === 0 ? COLORS.floorLight : COLORS.floorDark;
+            ctx.fillRect(px, py, CELL, CELL);
+          }
+
+          if (cell.emoji) {
+            ctx.font = '30px serif';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(cell.emoji, px + CELL / 2, py + CELL / 2 + 2);
+          }
+        }
+      }
+
+      // 클리핑 해제
+      ctx.restore();
+
+      // 캐릭터 (SVG, 상황별 표정)
+      const pcx = ox + player.drawX * CELL + CELL / 2;
+      const pcy = oy + player.drawY * CELL + CELL / 2;
+      const sinceEat = performance.now() - lastEatAt;
+      const lastEaten = stack.length > 0 ? stack[stack.length - 1] : null;
+      const justAteTrap = sinceEat < YUM_MS && lastEaten && lastEaten.isTrap;
+
+      let charImg = IMG.charDefault;
+      if (failed) charImg = IMG.charSad;
+      else if (justAteTrap) charImg = IMG.charSad;
+      else if (sinceEat < YUM_MS) charImg = IMG.charYum;
+      // 섭취 직후 살짝 부풀었다 돌아오는 냠냠 연출
+      const pop = sinceEat < YUM_MS ? 1 + 0.14 * (1 - sinceEat / YUM_MS) : 1;
+      const size = 46 * pop;
+      if (charImg.complete && charImg.naturalWidth) {
+        ctx.drawImage(charImg, pcx - size / 2, pcy - size / 2, size, size);
+      }
+
+      ctx.restore(); // 흔들림은 게임 영역에만 적용
+
+      // 하단 조작 안내
+      ctx.font = '14px Pretendard Variable, sans-serif';
+      ctx.fillStyle = COLORS.textSub;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'top';
+      ctx.fillText('이동: 방향키 or WASD | 재시작: R | 스테이지 선택: ESC', CANVAS_W / 2, CANVAS_H - 40);
+
+      // 클리어 팝업 (위쪽 번 착지 연출이 끝난 뒤 표시)
+      if (completed && performance.now() - completedAt > CLEAR_POPUP_DELAY_MS) {
+        renderClearPopup();
+      }
+      if (failed) renderFailPopup();
+
+      if (confirming) renderConfirmPopup();
+    }
+
+    // 상단 남은 시간 바 (게임 영역 위)
+    function renderTimeBar() {
+      const gap = 22; // 좌우 간격과 동일하게 맞춤
+      const barH = 16;
+      const bx = GAME_X;
+      const by = GAME_Y - gap - barH; // 게임영역에 더 가깝게 내림
+      const ratio = timeLeft / stage.timeLimit;
+
+      // 텍스트 너비 고려
+      const textStr = `${Math.ceil(timeLeft)}s`;
+      const textW = 40; // 텍스트 영역
+      const barW = GAME_SIZE - textW - 12; // 텍스트 포함 너비가 GAME_SIZE가 되도록
+
+      ctx.fillStyle = COLORS.timerBg;
+      ctx.beginPath();
+      ctx.roundRect(bx, by, barW, barH, barH / 2);
+      ctx.fill();
+
+      if (ratio > 0) {
+        // 남은 비율에 따라 초록 → 주황 → 빨강, 20% 이하에서는 깜빡이며 경고
+        ctx.fillStyle = ratio > 0.5 ? COLORS.timerGreen : ratio > 0.2 ? COLORS.timerOrange : COLORS.timerRed;
+        if (ratio <= 0.2 && !completed && !failed) {
+          ctx.globalAlpha = 0.55 + 0.45 * Math.abs(Math.sin(performance.now() / 180));
+        }
+        ctx.beginPath();
+        ctx.roundRect(bx, by, barW * ratio, barH, barH / 2);
+        ctx.fill();
+        ctx.globalAlpha = 1;
+      }
+
+      ctx.fillStyle = COLORS.text;
+      ctx.font = 'bold 15px Pretendard Variable, sans-serif';
+      ctx.textAlign = 'right';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(textStr, bx + GAME_SIZE, by + barH / 2 + 1);
+    }
+
+    // 좌측 주문서 패널: 레시피 순서 표시, 다음에 먹을 재료 하이라이트
+    function renderOrder() {
+      drawPanel(SIDE_L_X, GAME_Y, SIDE_W, GAME_SIZE); // 게임 영역과 Y, 높이 동일하게
+      const panelCx = SIDE_L_X + SIDE_W / 2;
+      const names = eatenNames();
+      // 다음에 먹을 재료 = 주문서에서 아직 안 먹은 첫 재료
+      const nextName = stage.recipe.find((name) => !names.includes(name));
+
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.font = 'bold 18px Pretendard Variable, sans-serif';
+      ctx.fillStyle = COLORS.text;
+      ctx.fillText('주문서', panelCx, GAME_Y + 28);
+
+      // 제목 아래 구분선
+      ctx.strokeStyle = COLORS.panelBorder;
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(SIDE_L_X + 20, GAME_Y + 56);
+      ctx.lineTo(SIDE_L_X + SIDE_W - 20, GAME_Y + 56);
+      ctx.stroke();
+
+      for (let i = 0; i < stage.recipe.length; i++) {
+        const name = stage.recipe[i];
+        const code = Object.keys(INGREDIENTS).find((k) => INGREDIENTS[k].name === name);
+        const eaten = names.includes(name);
+        const y = GAME_Y + 90 + i * 40;
+
+        // 다음에 먹을 재료 하이라이트 (좌측 액센트 바 + 연한 배경)
+        if (name === nextName) {
+          ctx.fillStyle = COLORS.highlightBorder;
+          ctx.beginPath();
+          ctx.roundRect(panelCx - 72, y - 16, 3, 32, 1.5);
+          ctx.fill();
+          ctx.fillStyle = COLORS.highlight;
+          ctx.beginPath();
+          ctx.roundRect(panelCx - 68, y - 16, 136, 32, 8);
+          ctx.fill();
+        }
+
+        ctx.globalAlpha = eaten ? 0.35 : 1;
+        ctx.font = '15px Pretendard Variable, sans-serif';
+        ctx.fillStyle = COLORS.text;
+        ctx.textAlign = 'right';
+        ctx.fillText(`${i + 1}.`, panelCx - 34, y);
+        ctx.font = '26px serif';
+        ctx.textAlign = 'center';
+        ctx.fillText(INGREDIENTS[code].emoji, panelCx, y);
+        ctx.globalAlpha = 1;
+
+        // 먹은 재료 체크 표시
+        if (eaten) {
+          ctx.font = '16px Pretendard Variable, sans-serif';
+          ctx.fillStyle = COLORS.check;
+          ctx.fillText('✓', panelCx + 44, y);
+        }
+      }
+    }
+
+    // 실패 팝업
+    function renderFailPopup() {
+      overlayFull();
+
+      const cw = 340;
+      const ch = 300;
+      const cx = (CANVAS_W - cw) / 2;
+      const cy = (CANVAS_H - ch) / 2;
+
+      ctx.shadowColor = 'rgba(0,0,0,0.15)';
+      ctx.shadowBlur = 24;
+      ctx.fillStyle = COLORS.panel;
+      ctx.beginPath();
+      ctx.roundRect(cx, cy, cw, ch, 20);
+      ctx.fill();
+      ctx.shadowColor = 'transparent';
+      ctx.shadowBlur = 0;
+
+      const cardCx = cx + cw / 2;
+      const cardCy = cy + ch / 2;
+
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillStyle = COLORS.text;
+      ctx.font = 'bold 28px Pretendard Variable, sans-serif';
+      ctx.fillText(failedReason === 'trap' ? '영업 실패... 😥' : '시간 초과... ⏰', cardCx, cardCy - 80);
+
+      ctx.font = '16px Pretendard Variable, sans-serif';
+      ctx.fillStyle = COLORS.textSub;
+      ctx.fillText(`"${failComment}"`, cardCx, cardCy - 20);
+
+      renderResultTextLinks(cardCx, cardCy + 55);
+    }
+
+    // 우측 버거 스택 패널 (아래 → 위, 레이어형 SVG)
+    function renderStack() {
+      drawPanel(SIDE_R_X, GAME_Y, SIDE_W, GAME_SIZE); // 게임 영역과 Y, 높이 동일하게
+      const panelCx = SIDE_R_X + SIDE_W / 2;
+      const baseY = GAME_Y + GAME_SIZE - 30; // 내버거 바닥 높이 살짝 조정
+      const now = performance.now();
+      const s = STACK_LAYER_W / 120;
+
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.font = 'bold 18px Pretendard Variable, sans-serif';
+      ctx.fillStyle = COLORS.text;
+      ctx.fillText('내 버거', panelCx, GAME_Y + 28);
+
+      // 제목 아래 구분선
+      ctx.strokeStyle = COLORS.panelBorder;
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(SIDE_R_X + 20, GAME_Y + 56);
+      ctx.lineTo(SIDE_R_X + SIDE_W - 20, GAME_Y + 56);
+      ctx.stroke();
+
+      // 아래 번 (시작 상태)
+      drawImg(IMG.bunBottom, panelCx, baseY, s);
+
+      // 스택이 비어 있을 때 안내
+      if (stack.length === 0 && !completed) {
+        ctx.font = '13px Pretendard Variable, sans-serif';
+        ctx.fillStyle = COLORS.textSub;
+        ctx.fillText('재료를 모아보세요!', panelCx, baseY - 50);
+      }
+
+      // 먹은 순서대로 위로 쌓기
+      for (let i = 0; i < stack.length; i++) {
+        const item = stack[i];
+        const t = Math.min(1, (now - item.eatenAt) / EAT_POP_MS);
+        const drop = (1 - easeOutBack(t)) * 26; // 위에서 떨어져 통통 튀며 안착
+        drawImg(layerImage(item), panelCx, baseY - STACK_STEP * (i + 1) - drop, s);
+      }
+
+      // 위쪽 번: 평소엔 패널 맨 위에 떠 있고, 완성되면 스택 위로 떨어져 덮는다
+      const floatY = GAME_Y + 120;
+      let bunY = floatY;
+      if (completed) {
+        const t = Math.min(1, (now - completedAt) / BUN_FALL_MS);
+        const targetY = baseY - STACK_STEP * (stack.length + 1);
+        bunY = floatY + (targetY - floatY) * t * t; // 가속하며 낙하
+      }
+      drawImg(IMG.bunTop, panelCx, bunY, s);
+    }
+
+    // 캔버스 전체 반투명 오버레이
+    function overlayFull() {
+      ctx.fillStyle = COLORS.overlay;
+      ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
+    }
+
+    // 클리어 팝업
+    function renderClearPopup() {
+      overlayFull();
+
+      const hasNext = currentStageIndex + 1 < STAGES.length;
+      const cw = 360;
+      const ch = hasNext ? 360 : 320;
+      const cx = (CANVAS_W - cw) / 2;
+      const cy = (CANVAS_H - ch) / 2;
+
+      ctx.shadowColor = 'rgba(0,0,0,0.15)';
+      ctx.shadowBlur = 24;
+      ctx.fillStyle = COLORS.panel;
+      ctx.beginPath();
+      ctx.roundRect(cx, cy, cw, ch, 20);
+      ctx.fill();
+      ctx.shadowColor = 'transparent';
+      ctx.shadowBlur = 0;
+
+      const cardCx = cx + cw / 2;
+      const cardCy = cy + ch / 2;
+
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillStyle = COLORS.text;
+      ctx.font = 'bold 30px Pretendard Variable, sans-serif';
+
+      // 별점: 하나씩 통통 튀며 등장
+      const starGap = 48;
+      const popupAge = performance.now() - completedAt - CLEAR_POPUP_DELAY_MS;
+
+      let titleText = '버거 완성! 🎉';
+      if (stars === 1) titleText = '일단 완성.. 😅';
+      else if (stars === 2) titleText = '버거 완성! 🎉';
+      else if (stars === 3) titleText = '완벽한 버거 ✨';
+
+      if (hasNext) {
+        ctx.fillText(titleText, cardCx, cardCy - 105);
+
+        for (let i = 0; i < 3; i++) {
+          const st = Math.min(1, Math.max(0, (popupAge - i * 200) / 280));
+          if (st === 0) continue;
+          ctx.font = `${Math.max(1, Math.round(40 * easeOutBack(st)))}px serif`;
+          ctx.fillStyle = i < stars ? COLORS.star : COLORS.starEmpty;
+          ctx.fillText('★', cardCx + (i - 1) * starGap, cardCy - 50);
+        }
+
+        drawButton(cardCx - 110, cardCy, 220, 44, '다음 스테이지 (Enter)', () => {
+          currentStageIndex += 1;
+          loadStage(STAGES[currentStageIndex]);
+        });
+
+        renderResultTextLinks(cardCx, cardCy + 80);
+      } else {
+        ctx.fillText(titleText, cardCx, cardCy - 90);
+
+        for (let i = 0; i < 3; i++) {
+          const st = Math.min(1, Math.max(0, (popupAge - i * 200) / 280));
+          if (st === 0) continue;
+          ctx.font = `${Math.max(1, Math.round(40 * easeOutBack(st)))}px serif`;
+          ctx.fillStyle = i < stars ? COLORS.star : COLORS.starEmpty;
+          ctx.fillText('★', cardCx + (i - 1) * starGap, cardCy - 30);
+        }
+
+        renderResultTextLinks(cardCx, cardCy + 60);
+      }
+    }
+
+    // 텍스트 형태의 링크 버튼을 그리는 헬퍼 함수
+    function drawTextLink(x, y, text, action) {
+      ctx.font = 'bold 16px Pretendard Variable, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+
+      const w = ctx.measureText(text).width;
+      const h = 24;
+      const hovered = lastMouse.x >= x - w / 2 && lastMouse.x <= x + w / 2 &&
+        lastMouse.y >= y - h / 2 && lastMouse.y <= y + h / 2;
+
+      ctx.fillStyle = hovered ? COLORS.highlight : COLORS.textSub;
+      ctx.fillText(text, x, y);
+
+      if (hovered) {
+        ctx.strokeStyle = COLORS.highlight;
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.moveTo(x - w / 2, y + 12);
+        ctx.lineTo(x + w / 2, y + 12);
+        ctx.stroke();
+      }
+
+      hitAreas.push({ x: x - w / 2, y: y - h / 2, w, h, action });
+    }
+
+    // 결과 화면 공통 텍스트 링크: 다시 하기(R) | 스테이지 선택(ESC) -> 두 줄로 변경
+    function renderResultTextLinks(x, y) {
+      drawTextLink(x, y, '다시 하기 (R)', () => loadStage(STAGES[currentStageIndex]));
+      drawTextLink(x, y + 36, '스테이지 선택 (ESC)', exitToSelect);
+    }
+
+    function renderConfirmPopup() {
+      // 반투명 배경 (캔버스 전체)
+      overlayFull();
+
+      // 팝업 카드
+      const boxW = 360;
+      const boxH = 200;
+      const bx = (CANVAS_W - boxW) / 2;
+      const by = (CANVAS_H - boxH) / 2;
+      ctx.shadowColor = 'rgba(0,0,0,0.15)';
+      ctx.shadowBlur = 24;
+      ctx.fillStyle = COLORS.panel;
+      ctx.beginPath();
+      ctx.roundRect(bx, by, boxW, boxH, 20);
+      ctx.fill();
+      ctx.shadowColor = 'transparent';
+      ctx.shadowBlur = 0;
+
+      ctx.fillStyle = COLORS.text;
+      ctx.font = 'bold 24px Pretendard Variable, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      const msg = confirming === 'restart' ? '다시 시작할까요?' : '스테이지 선택으로 나갈까요?';
+      ctx.fillText(msg, CANVAS_W / 2, by + 58);
+
+      drawButton(CANVAS_W / 2 - 150, by + 113, 140, 42, '확인 (Enter)', () => {
+        const action = confirming;
+        confirming = null;
+        if (action === 'restart') loadStage(STAGES[currentStageIndex]);
+        else exitToSelect();
+      });
+      drawButton(CANVAS_W / 2 + 10, by + 113, 140, 42, '취소 (ESC)', () => {
+        confirming = null;
+      });
+    }
+
+    let lastTime = performance.now();
+    function frame(now) {
+      const dt = Math.min(0.1, (now - lastTime) / 1000);
+      lastTime = now;
+      if (screen === 'play') update(dt);
+      render();
+      updateCursor();
+      requestAnimationFrame(frame);
+    }
+
+    requestAnimationFrame(frame);
+  </script>
 </body>
+
 </html>
