@@ -1199,6 +1199,43 @@
       hitAreas.push({ x, y, w, h, action });
     }
 
+    // 모드 선택용 다기능 카드 버튼 (2줄 텍스트 + 테마 지원)
+    function drawModeButton(x, y, w, h, title, subtitle, theme, action) {
+      const mx = lastMouse.x;
+      const my = lastMouse.y;
+      const hovered = mx >= x && mx <= x + w && my >= y && my <= y + h;
+      const push = hovered ? 4 : 0;
+      const radius = h / 2; // 알약 형태
+
+      // 그림자
+      ctx.fillStyle = theme.shadow;
+      ctx.beginPath();
+      ctx.roundRect(x, y + 4, w, h, radius);
+      ctx.fill();
+
+      // 윗면
+      ctx.fillStyle = theme.bg;
+      ctx.strokeStyle = hovered ? theme.borderHover : theme.border;
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.roundRect(x, y + push, w, h, radius);
+      ctx.fill();
+      ctx.stroke();
+
+      // 타이틀
+      ctx.fillStyle = COLORS.text;
+      ctx.font = uiFont(22, 'bold');
+      ctx.textAlign = 'center';
+      fillTextVCenter(title, x + w / 2, y + push + h / 2 - 10);
+
+      // 서브타이틀
+      ctx.fillStyle = COLORS.textSub;
+      ctx.font = uiFont(14);
+      fillTextVCenter(subtitle, x + w / 2, y + push + h / 2 + 14);
+
+      hitAreas.push({ x, y, w, h, action });
+    }
+
     // 둥근 모서리 패널 (게임 영역·좌우 정보 패널 공용)
     function drawPanel(x, y, w, h) {
       ctx.shadowColor = 'rgba(120, 100, 80, 0.2)';
@@ -1233,13 +1270,38 @@
 
     // 캔버스 middle baseline은 폰트 어센트/디센트가 비대칭이라 시각적으로 위쪽에 치우쳐 보인다.
     // 실제 글리프 경계(actualBoundingBox)를 측정해 baseline을 보정하면 정확히 정중앙에 그려진다.
+    const textOffsetCache = {};
     function fillTextVCenter(text, cx, cy) {
-      // measureText의 actualBoundingBox 값은 호출 시점의 textBaseline 기준이므로,
-      // 측정 전에 baseline을 먼저 고정해야 offset 계산이 어긋나지 않는다.
+      const key = ctx.font + ':' + text;
+      let offset = textOffsetCache[key];
+      if (offset === undefined) {
+        ctx.textBaseline = 'alphabetic';
+        const m = ctx.measureText(text);
+        offset = (m.actualBoundingBoxAscent - m.actualBoundingBoxDescent) / 2;
+        textOffsetCache[key] = offset;
+      }
       ctx.textBaseline = 'alphabetic';
-      const m = ctx.measureText(text);
-      const offset = (m.actualBoundingBoxAscent - m.actualBoundingBoxDescent) / 2;
       ctx.fillText(text, cx, cy + offset);
+    }
+
+    // 이모지 등 좌우 여백/중심이 불규칙한 문자를 완벽히 가로세로 중앙에 정렬하는 헬퍼
+    const textCenterCache = {};
+    function fillOpticalCenter(text, cx, cy) {
+      const key = ctx.font + ':' + text;
+      let off = textCenterCache[key];
+      if (off === undefined) {
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'alphabetic';
+        const m = ctx.measureText(text);
+        off = {
+          x: (m.actualBoundingBoxLeft - m.actualBoundingBoxRight) / 2,
+          y: (m.actualBoundingBoxAscent - m.actualBoundingBoxDescent) / 2
+        };
+        textCenterCache[key] = off;
+      }
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'alphabetic';
+      ctx.fillText(text, cx + off.x, cy + off.y);
     }
 
     function tryMove(dc, dr) {
@@ -1357,13 +1419,27 @@
       else renderPlay();
     }
 
+    const THEME_STAGE = {
+      bg: COLORS.accentSoft,
+      shadow: COLORS.accentBorder,
+      border: COLORS.accentBorder,
+      borderHover: COLORS.accent
+    };
+
+    const THEME_ENDLESS = {
+      bg: '#eef7eb', // Soft pastel mint
+      shadow: '#c0d9be', // Mint shadow
+      border: '#c0d9be', // Mint border
+      borderHover: '#7fa96e' // Vibrant mint hover
+    };
+
     // 타이틀 화면
     function renderTitle() {
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
 
-      // 전체적으로 20px 내려서 시각적 중앙 맞춤
-      const cy = CANVAS_H / 2 + 20;
+      // 전체적으로 조금 위로 올려서 공간 확보
+      const cy = CANVAS_H / 2 + 10;
 
       // 캐릭터 뒤에 부드러운 후광 효과 (햄버거 위치에 맞춰 Y 좌표 이동)
       const glow = ctx.createRadialGradient(CANVAS_W / 2, cy - 75, 0, CANVAS_W / 2, cy - 75, 160);
@@ -1382,7 +1458,7 @@
       ctx.shadowOffsetY = 4;
       ctx.fillStyle = COLORS.text;
       ctx.font = uiFont(56, 'bold');
-      ctx.fillText('Burger Game v1', CANVAS_W / 2, cy - 10);
+      ctx.fillText('Burger Game v1', CANVAS_W / 2, cy - 15);
 
       // 그림자 초기화
       ctx.shadowColor = 'transparent';
@@ -1391,58 +1467,123 @@
 
       ctx.font = uiFont(16);
       ctx.fillStyle = COLORS.textSub;
-      ctx.fillText('주문서 순서대로 재료를 먹어 버거를 완성하세요!', CANVAS_W / 2, cy + 40);
+      ctx.fillText('주문서 순서대로 재료를 먹어 버거를 완성하세요!', CANVAS_W / 2, cy + 30);
 
-      // 모드 버튼 2종: 스테이지(정해진 10판) / 무한(랜덤 맵 무한)
-      drawButton((CANVAS_W - 240) / 2, cy + 72, 240, 48, '스테이지 모드 (Enter)', () => {
+      // --- 좌우 나란히 배치되는 모드 선택 버튼 ---
+      const btnW = 200;
+      const btnH = 66;
+      const gap = 24;
+      const leftX = CANVAS_W / 2 - btnW - gap / 2;
+      const rightX = CANVAS_W / 2 + gap / 2;
+      // 버튼들은 cy 기준으로 살짝 더 위로 올림
+      const btnY = cy + 85;
+
+      // 1. 스테이지 모드
+      drawModeButton(leftX, btnY, btnW, btnH, '스테이지 모드', 'Enter 눌러 시작', THEME_STAGE, () => {
         screen = 'select';
       });
-      drawButton((CANVAS_W - 240) / 2, cy + 130, 240, 48, '무한 모드 (Space)', () => {
+
+      const save = loadSave();
+      let clearedCount = 0;
+      for (let i = 0; i < STAGES.length; i++) {
+        if (save[STAGES[i].id] > 0) clearedCount++;
+      }
+      const stageRecord = clearedCount >= STAGES.length 
+        ? '모든 스테이지 클리어!' 
+        : `스테이지 ${clearedCount + 1} 진행 중`;
+
+      ctx.font = uiFont(14);
+      ctx.fillStyle = COLORS.textSub;
+      ctx.fillText(stageRecord, leftX + btnW / 2, btnY + btnH + 32);
+
+      // 2. 무한 모드
+      drawModeButton(rightX, btnY, btnW, btnH, '무한 모드', 'Space 눌러 시작', THEME_ENDLESS, () => {
         startEndless();
       });
 
-      // 무한 모드 최고 기록 (라운드 + 평균 별점)
       const rec = loadEndlessRecord();
+      const endlessRecord = rec.bestRound > 0 
+        ? `최고: ${rec.bestRound}라운드 · 평균 ★${rec.bestAvg.toFixed(1)}`
+        : '한계에 도전하세요!';
+
       ctx.font = uiFont(14);
       ctx.fillStyle = COLORS.textSub;
-      if (rec.bestRound > 0) {
-        ctx.fillText(`무한 모드 최고 기록: ${rec.bestRound}라운드 · 평균 ★${rec.bestAvg.toFixed(1)}`, CANVAS_W / 2, cy + 192);
-      }
+      ctx.fillText(endlessRecord, rightX + btnW / 2, btnY + btnH + 32);
 
-      // 하단 조작 힌트
-      ctx.fillText('이동: 방향키 or WASD', CANVAS_W / 2, CANVAS_H - 34);
+      // 개발자 크레딧
+      ctx.font = uiFont(14);
+      ctx.fillStyle = '#b0a89a';
+      ctx.fillText('Developed by hsskim', CANVAS_W / 2, CANVAS_H - 24);
+    }
+
+    function drawLockIcon(cx, cy, size) {
+      const bw = size * 0.7;
+      const bh = size * 0.55;
+      const bx = cx - bw / 2;
+      const by = cy - bh / 2 + size * 0.15;
+      const sw = size * 0.4;
+      
+      ctx.lineWidth = size * 0.12;
+      ctx.lineCap = 'round';
+      
+      // 고리
+      ctx.strokeStyle = '#c4b5a3'; // wall 색상 톤
+      ctx.beginPath();
+      ctx.arc(cx, by, sw / 2, Math.PI, 0);
+      ctx.stroke();
+      
+      // 자물쇠 몸통
+      ctx.fillStyle = '#e8c49a'; // 햄버거 빵 느낌의 부드러운 색
+      ctx.beginPath();
+      ctx.roundRect(bx, by, bw, bh, size * 0.1);
+      ctx.fill();
+      
+      // 열쇠 구멍
+      ctx.fillStyle = '#b39575';
+      ctx.beginPath();
+      ctx.arc(cx, by + bh * 0.4, size * 0.08, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.beginPath();
+      ctx.moveTo(cx - size * 0.06, by + bh * 0.4);
+      ctx.lineTo(cx + size * 0.06, by + bh * 0.4);
+      ctx.lineTo(cx + size * 0.12, by + bh * 0.75);
+      ctx.lineTo(cx - size * 0.12, by + bh * 0.75);
+      ctx.fill();
     }
 
     // 스테이지 선택 화면
     function renderSelect() {
       const save = loadSave();
 
-      // 제목 그림자
+      // 전체 화면 수직 중앙 정렬
+      const titleY = 100;
+
+      // 제목
       ctx.shadowColor = 'rgba(120, 100, 80, 0.2)';
       ctx.shadowBlur = 8;
       ctx.shadowOffsetY = 2;
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
       ctx.fillStyle = COLORS.text;
-      ctx.font = uiFont(28, 'bold'); // 글씨 크기 줄임
-      ctx.fillText('스테이지 선택', CANVAS_W / 2, 180); // 전체 화면 중앙에 오도록 Y 위치 내림
+      ctx.font = uiFont(28, 'bold');
+      ctx.fillText('스테이지 선택', CANVAS_W / 2, titleY);
 
       ctx.shadowColor = 'transparent';
       ctx.shadowBlur = 0;
       ctx.shadowOffsetY = 0;
 
-      const cardW = 140;
-      const cardH = 150; // 2행이 들어가도록 높이 축소
-      const gapX = 20;
-      const gapY = 22;
+      const cardW = 150;
+      const cardH = 160;
+      const gapX = 24;
+      const gapY = 24;
       const cols = SELECT_COLS;
       const rows = Math.ceil(STAGES.length / cols);
       const gridW = cols * cardW + (cols - 1) * gapX;
       const gridH = rows * cardH + (rows - 1) * gapY;
       const gridX0 = (CANVAS_W - gridW) / 2;
-      const gridY0 = 226; // 제목(180) 아래, 하단 안내 위 밴드에 그리드 배치
+      const gridY0 = 160;
 
-      // 카드 뒤에 부드러운 배경 글로우
+      // 배경 글로우
       const glowCx = CANVAS_W / 2;
       const glowCy = gridY0 + gridH / 2;
       const glow = ctx.createRadialGradient(glowCx, glowCy, 0, glowCx, glowCy, 360);
@@ -1460,32 +1601,27 @@
         const x = gridX0 + col * (cardW + gapX);
         const cardTop = gridY0 + row * (cardH + gapY);
 
-        // 마우스 호버 여부 확인
         const hovered = lastMouse.x >= x && lastMouse.x <= x + cardW &&
           lastMouse.y >= cardTop && lastMouse.y <= cardTop + cardH;
 
-        // 잠금 해제된 카드에 마우스를 올렸거나, 키보드로 선택했을 때 시각적 하이라이트 적용
         const isHighlighted = (hovered || selected) && unlocked;
-
-        // 둥둥 뜨는 효과
         const floatY = isHighlighted ? Math.sin(performance.now() / 300) * 6 - 8 : 0;
         const cardY = cardTop + floatY;
 
-        // 선택된 카드 그림자 (바닥에 넓게 퍼짐)
         if (isHighlighted) {
           ctx.shadowColor = 'rgba(180, 140, 100, 0.25)';
           ctx.shadowBlur = 16;
           ctx.shadowOffsetY = 8;
         }
 
-        // 카드 3D 하단부 (버튼처럼 깊이감)
+        // 카드 하단부
         ctx.fillStyle = isHighlighted ? '#e0b88f' : COLORS.panelBorder;
         ctx.beginPath();
         ctx.roundRect(x, cardY + 6, cardW, cardH, 20);
         ctx.fill();
 
-        // 카드 윗면
-        ctx.fillStyle = isHighlighted ? COLORS.highlight : COLORS.panel;
+        // 카드 윗면 (잠긴 상태면 약간 어두운 색)
+        ctx.fillStyle = isHighlighted ? COLORS.highlight : (unlocked ? COLORS.panel : '#f2efe9');
         ctx.strokeStyle = isHighlighted ? COLORS.accent : COLORS.panelBorder;
         ctx.lineWidth = isHighlighted ? 3 : 2;
         ctx.beginPath();
@@ -1493,41 +1629,36 @@
         ctx.fill();
         ctx.stroke();
 
-        // 그림자 리셋
         ctx.shadowColor = 'transparent';
         ctx.shadowBlur = 0;
         ctx.shadowOffsetY = 0;
 
-        ctx.globalAlpha = unlocked ? 1 : 0.45;
-
-        ctx.fillStyle = COLORS.text;
-        ctx.font = uiFont(44, 'bold'); // 숫자 폰트 크기 조절
-        ctx.fillText(String(data.id), x + cardW / 2, cardY + 54);
-
-        ctx.font = uiFont(15);
-        ctx.fillText(unlocked ? data.name : '???', x + cardW / 2, cardY + 96);
-
-        // 획득 별 (클리어 기록 없으면 회색 별 3개)
-        const earned = save[data.id] || 0;
-        ctx.font = '18px serif'; // 별 크기 조절
-        for (let s = 0; s < 3; s++) {
-          ctx.fillStyle = s < earned ? COLORS.star : COLORS.starEmpty;
-          ctx.fillText('★', x + cardW / 2 + (s - 1) * 24, cardY + 134);
-        }
-
-        ctx.globalAlpha = 1;
-
         if (!unlocked) {
-          ctx.font = '28px serif';
-          ctx.fillText('🔒', x + cardW / 2, cardY + 24);
+          // 잠긴 스테이지: 자물쇠 아이콘만 표시
+          drawLockIcon(x + cardW / 2, cardY + cardH / 2, 60);
         } else {
-          // 잠금 해제된 카드는 클릭으로 바로 시작 (마우스 호버 시 포커스 동기화)
+          // 해금된 스테이지: 미니멀리즘 테마 (숫자, 텍스트, 별)
+          ctx.fillStyle = COLORS.text; // 다른 글자 색과 동일하게
+          ctx.font = uiFont(38, 'bold'); // 숫자 크기 줄임
+          ctx.fillText(String(data.id), x + cardW / 2, cardY + 46); // 전체적으로 위로 올림
+
+          ctx.fillStyle = COLORS.text;
+          ctx.font = uiFont(18); // 제목 크기 키움
+          ctx.fillText(data.name, x + cardW / 2, cardY + 92); // 전체적으로 위로 올림
+
+          const earned = save[data.id] || 0;
+          ctx.font = '24px serif'; // 별 크기 키움
+          for (let s = 0; s < 3; s++) {
+            ctx.fillStyle = s < earned ? COLORS.star : '#ebdcc5';
+            ctx.fillText('★', x + cardW / 2 + (s - 1) * 22, cardY + 130); // 별 간격은 줄이고 위로 올림
+          }
+
           hitAreas.push({
             x, y: cardY, w: cardW, h: cardH,
             action: () => startStory(i),
             hoverAction: () => {
               if (selectedIndex !== i) {
-                selectedIndex = i; // 마우스가 올라가면 키보드 포커스도 해당 카드로 이동
+                selectedIndex = i;
               }
             }
           });
@@ -2029,72 +2160,83 @@
       });
     }
 
-    // 온보딩 팝업 내용 (게임 아이콘 활용). story는 기본 규칙, endless는 목숨 규칙 강조.
-    const ONBOARD_CONTENT = {
-      story: {
-        title: '스테이지 모드',
-        rows: [
-          ['🕹️', '방향키 또는 WASD로 움직여요'],
-          ['🥩', '주문서 순서대로 재료를 먹어요'],
-          ['🧦', '쓰레기(함정)는 피하기! 3개 먹으면 실패'],
-          ['⏱️', '제한 시간 안에 버거를 완성해요'],
-          ['⭐', '순서 정확 + 함정 0개면 별 3개!'],
-        ],
-      },
-      endless: {
-        title: '무한 모드',
-        rows: [
-          ['🍔', '라운드마다 새 랜덤 맵! 어디까지 갈 수 있나요?'],
-          ['⏱️', '제한 시간 안에 주문서를 완성해요'],
-          ['🧦', '쓰레기(함정)는 피하기! 3개 먹으면 실패'],
-          ['♥', '목숨 3개로 시작, 실패하면 하나씩 잃어요'],
-          ['⭐', '별 3개(완벽)로 클리어하면 목숨을 회복!'],
-        ],
-      },
-    };
+    // 온보딩 팝업 내용
+    const ONBOARD_ROWS_STORY = [
+      ['🕹️', '*방향키* 또는 *WASD*로 움직여요.'],
+      ['📋', '주문서의 재료들을 *순서대로* 모아요.'],
+      ['🍔', '시간 안에 *먹을 수 있는* 버거를 완성해요!'],
+    ];
+
+    const ONBOARD_ROWS_ENDLESS = [
+      ['🗺️', '라운드마다 *랜덤한 맵과 주문*이 계속돼요.'],
+      ['💔', '실패하면 *하트를 잃고*, 모두 사라지면 *게임이 끝나요.*'],
+      ['🍔', '*완벽한 버거*를 만들면 하트가 다시 채워져요.'],
+      ['🔥', '어디까지 갈 수 있을지 *최고 기록*에 도전하세요!'],
+    ];
 
     function renderOnboardingPopup() {
       overlayFull();
-      const content = ONBOARD_CONTENT[onboarding];
-      const rows = content.rows;
-      const cw = 500;
-      const ch = rows.length * 46 + 224;
+      const rows = onboarding === 'endless' ? ONBOARD_ROWS_ENDLESS : ONBOARD_ROWS_STORY;
+      
+      const iconSize = 30;
+      const fontSize = 20;
+      const textGap = 16; // 아이콘과 텍스트 사이 간격
+
+      // 1. 텍스트 파싱 및 최대 너비 계산
+      let maxRowW = 0;
+      const parsedRows = rows.map(([icon, text]) => {
+        const parts = text.split('*');
+        let textW = 0;
+        for (let i = 0; i < parts.length; i++) {
+          if (!parts[i]) continue;
+          ctx.font = uiFont(fontSize, (i % 2 === 1) ? 'bold' : 'normal');
+          textW += ctx.measureText(parts[i]).width;
+        }
+        const rowW = iconSize + textGap + textW;
+        if (rowW > maxRowW) maxRowW = rowW;
+        return { icon, parts, textW };
+      });
+
+      // 2. 카드 크기 및 위치 동적 계산 (좌우 완벽 대칭)
+      const paddingX = 46; // 좌우 여백
+      const cw = Math.max(440, maxRowW + paddingX * 2);
+      // 상단여백 40 + 줄길이 + 버튼 위 여백 36 + 버튼 50 + 하단여백 30
+      const ch = 40 + rows.length * 56 + 36 + 50 + 30; 
       const cx = (CANVAS_W - cw) / 2;
       const cy = (CANVAS_H - ch) / 2;
       const cardCx = cx + cw / 2;
+
       drawCard(cx, cy, cw, ch, 22);
 
-      // 둥둥 뜨는 버거 캐릭터
-      const floatY = Math.sin(performance.now() / 400) * 5;
-      drawImg(IMG.charDefault, cardCx, cy + 88 + floatY, 1.3);
-
-      // 제목
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.fillStyle = COLORS.text;
-      ctx.font = uiFont(26, 'bold');
-      ctx.fillText(content.title, cardCx, cy + 116);
-
-      // 규칙 행: 아이콘 + 설명
-      const rowX = cx + 54;
-      let ry = cy + 152;
-      for (const [icon, text] of rows) {
+      // 3. 규칙 행 그리기 (가장 긴 줄을 기준으로 블록 전체를 중앙 정렬)
+      const blockStartX = cx + (cw - maxRowW) / 2;
+      let ry = cy + 40 + 28; // 상단 여백 40 + 줄 간격의 절반
+      
+      for (const { icon, parts } of parsedRows) {
+        // 아이콘 렌더링
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
-        if (icon === '♥') ctx.fillStyle = COLORS.timerRed;
-        else ctx.fillStyle = COLORS.text;
-        ctx.font = '24px serif';
-        ctx.fillText(icon, rowX, ry);
+        ctx.fillStyle = (icon === '♥' || icon === '💔') ? COLORS.timerRed : COLORS.text;
+        ctx.font = `${iconSize}px serif`;
+        // 이모지(아이콘)가 시각적으로 살짝 떠보이는 현상을 보정하기 위해 y축 +2
+        ctx.fillText(icon, blockStartX + iconSize / 2, ry + 2);
 
+        // 텍스트 렌더링
         ctx.textAlign = 'left';
-        ctx.fillStyle = COLORS.text;
-        ctx.font = uiFont(16);
-        ctx.fillText(text, rowX + 30, ry);
-        ry += 46;
+        let currentX = blockStartX + iconSize + textGap;
+        for (let i = 0; i < parts.length; i++) {
+          if (!parts[i]) continue;
+          const isBold = i % 2 === 1;
+          ctx.font = uiFont(fontSize, isBold ? 'bold' : 'normal');
+          ctx.fillStyle = isBold ? COLORS.text : COLORS.textSub;
+          ctx.fillText(parts[i], currentX, ry);
+          currentX += ctx.measureText(parts[i]).width;
+        }
+        ry += 56;
       }
 
-      // 시작 버튼
-      drawButton(cardCx - 110, cy + ch - 62, 220, 46, '시작! (Enter)', () => dismissOnboarding());
+      // 시작 버튼 (하단 여백 30 확보)
+      drawButton(cardCx - 110, cy + ch - 80, 220, 50, '시작! (Enter)', () => dismissOnboarding());
     }
 
     let lastTime = performance.now();
