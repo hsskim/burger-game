@@ -1732,7 +1732,7 @@
         const rightHudX = SIDE_R_X + SIDE_W / 2;
         const currentAvg = endlessClears > 0 ? (endlessStarSum / endlessClears).toFixed(1) : '-';
         ctx.fillStyle = COLORS.star;
-        ctx.font = uiFont(FONT.bodyLg, 'bold');
+        ctx.font = uiFont(FONT.body, 'bold');
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
         ctx.fillText(`평균 ★ ${currentAvg}`, rightHudX, hudY);
@@ -1973,14 +1973,19 @@
           // 목숨 소진: 런 종료 — 이번 런 요약(도달·평균) + 최고 기록
           const thisAvg = endlessClears > 0 ? (endlessStarSum / endlessClears).toFixed(1) : '-';
           const rec = loadEndlessRecord();
-          ctx.font = uiFont(FONT.bodyLg, 'bold');
+          ctx.font = uiFont(FONT.h3, 'bold');
           ctx.fillStyle = COLORS.text;
-          ctx.fillText(`${endlessRound}라운드에서 멈췄어요`, cardCx, cardCy - 36);
+          ctx.fillText(`최종 도달 : ${endlessRound} 라운드`, cardCx, cardCy - 30);
+          
+          ctx.font = uiFont(FONT.body);
+          ctx.fillStyle = COLORS.star;
+          ctx.fillText(`이번 런 평균 ★ ${thisAvg}`, cardCx, cardCy + 5);
+          
           ctx.font = uiFont(FONT.bodySm);
           ctx.fillStyle = COLORS.textSub;
-          ctx.fillText(`이번 런 · 평균 ★${thisAvg}`, cardCx, cardCy - 8);
-          ctx.fillText(`최고 기록 ${rec.bestRound}라운드 · ★${rec.bestAvg.toFixed(1)}`, cardCx, cardCy + 18);
-          renderResultTextLinks(cardCx, cardCy + 55);
+          ctx.fillText(`최고 기록 : ${rec.bestRound} 라운드`, cardCx, cardCy + 35);
+          
+          renderResultTextLinks(cardCx, cardCy + 85);
         }
       } else {
         ctx.font = uiFont(FONT.bodySm);
@@ -2156,7 +2161,7 @@
         }
         const btnY = isEndless ? cardCy + 15 : cardCy;
         drawButton(cardCx - 110, btnY, 220, 44, isEndless ? '다음 주문 (Enter)' : '다음 스테이지 (Enter)', () => goNext());
-        renderResultTextLinks(cardCx, btnY + 80);
+        renderResultTextLinks(cardCx, btnY + 70);
       } else {
         renderResultTextLinks(cardCx, cardCy + 60);
       }
