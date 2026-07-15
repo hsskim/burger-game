@@ -1724,10 +1724,9 @@
         const breakT = failed ? (performance.now() - failedAt) / HEART_BREAK_MS : 1;
         if (failed && breakT < 1) {
           const gap = UI.gap;
-          // align 'center'에서 전체 목숨이 원래 (endlessLives + 1)개였을 때의 맨 오른쪽 하트 위치
-          const oldLives = endlessLives + 1;
-          const oldStartX = hudX - (oldLives - 1) * gap / 2;
-          const slotX = oldStartX + endlessLives * gap;
+          // maxLives(3) 기준으로 전체 하트의 시작 X좌표를 구한 뒤, 현재 줄어든 생명(endlessLives) 인덱스에 해당하는 X를 계산
+          const startX = hudX - (ENDLESS.maxLives - 1) * gap / 2;
+          const slotX = startX + endlessLives * gap;
           drawHeartBreak(slotX, hudY, breakT);
         }
 
@@ -1979,7 +1978,7 @@
           ctx.fillStyle = COLORS.textSub;
           ctx.fillText(`(최고 기록 : ${rec.bestRound}라운드)`, cardCx, cardCy + 5);
           
-          renderResultTextLinks(cardCx, cardCy + 55);
+          drawButton(cardCx - 110, cardCy + 40, 220, 44, '타이틀로 나가기 (ESC)', exitPlay);
         }
       } else {
         ctx.font = uiFont(FONT.bodySm);
@@ -2263,7 +2262,20 @@
       drawCard(cx, cy, cw, ch, UI.radius);
 
       // 2. 규칙 행 그리기
-      const blockStartX = cx + 50; // 좌우 여백을 고정값으로 처리
+      // 각 행의 최대 너비를 계산하여 완벽하게 중앙 정렬
+      let maxRowWidth = 0;
+      for (const [icon, text] of rows) {
+        let w = iconSize + textGap;
+        const parts = text.split('*');
+        for (let i = 0; i < parts.length; i++) {
+          if (!parts[i]) continue;
+          ctx.font = uiFont(fontSize, i % 2 === 1 ? 'bold' : 'normal');
+          w += ctx.measureText(parts[i]).width;
+        }
+        if (w > maxRowWidth) maxRowWidth = w;
+      }
+      const blockStartX = cardCx - maxRowWidth / 2;
+      
       const marginTop = 48;
       let ry = cy + marginTop + 28; // 상단 여백 + 줄 간격의 절반
       
