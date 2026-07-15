@@ -43,7 +43,12 @@ open index.html
 - **렌더**: Canvas에 맵·캐릭터·주문서·버거 스택·시간 바·팝업 그리기. 화면별 함수(`renderTitle`/`renderSelect`/`renderPlay` 등)로 분리
 - **화면 전환**: 타이틀 → 선택 → 플레이 → 결과, 그리고 온보딩 팝업(모드별 첫 진입 1회)
 
-**UI 그리기 규칙**: 색상은 `COLORS`, 폰트는 `uiFont(size, weight)`(패밀리는 `FONT_FAMILY` 한 곳), 반복 요소는 헬퍼로 통일 — `drawCard`(팝업), `drawButton`, `drawPanel`, `drawPanelHeader`, `drawHearts`, `drawTextLink`. UI 수정 시 이 헬퍼/토큰을 우선 사용한다.
+**UI 그리기 규칙 (디자인 토큰 및 하드코딩 현황)**:
+- **재사용 토큰**: 색상은 `COLORS`, 폰트 크기는 `FONT` 객체(hero, h1, body 등), 폰트 패밀리는 `uiFont(size, weight)`로 중앙 관리한다. 공통 수치는 `UI` 객체(radius, btnW, btnH, gap)를 사용한다.
+- **재사용 컴포넌트**: `drawCard`(팝업), `drawButton`(버튼), `drawModeButton`, `drawTextLink`, `drawPanel`, `drawPanelHeader`, `drawHearts`, `drawLockIcon` 등 반복되는 요소는 전용 헬퍼 함수를 호출한다. UI 수정 시 이 헬퍼/토큰을 우선 사용한다.
+- **명시적 하드코딩**: 특정 화면에 종속된 레이아웃 배치는 캔버스 환경의 직관성과 유지보수 편의를 위해 의도적으로 하드코딩한다.
+  - **팝업 크기**: 상태별 고정 크기 사용 (온보딩: 540x400 / 440x340, 클리어: 360x360 / 360x320 / 360x324, 실패: 340x300 / 340x264, 확인: 360x200). 
+  - **내부 요소 및 좌표**: 팝업 내 텍스트 위치(`cardCy ± n`), 선택 화면 그리드 시작점, 인게임 패널 크기 및 여백 등은 해당 렌더 함수 내부에서 고정 값으로 처리한다.
 
 ## 좌표·데이터 규칙 (prd.md 기준)
 
