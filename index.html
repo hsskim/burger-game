@@ -1710,36 +1710,20 @@
       const header = mode === 'endless' ? `무한 모드 -- Round ${endlessRound}` : `Stage ${stage.id} — ${stage.name}`;
       ctx.fillText(header, CANVAS_W / 2, 40);
 
-      // 무한 모드 목숨 HUD (좌상단 하트 패널) + 실패 시 깨짐 연출
+      // 무한 모드 목숨 HUD (좌상단 하트) + 실패 시 깨짐 연출
       if (mode === 'endless') {
-        const hudX = HEADER_X;
-        const hudY = 32;
-        const hSize = 28; // 하트 폰트 크기
-        const hGap = hSize + 6; // 하트 간격
-        const maxHearts = ENDLESS.maxLives;
-        
-        // 1. 반투명 배경 패널 (HUD 느낌)
-        const panelW = maxHearts * hGap + 20;
-        const panelH = hSize + 16;
-        drawCard(hudX, hudY - panelH / 2, panelW, panelH, UI.radius / 2); // 살짝 덜 둥글게
-
-        // 2. 비어있는(소진된) 하트 배경 먼저 그리기
-        ctx.font = `${hSize}px serif`;
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        ctx.fillStyle = COLORS.starEmpty;
-        for (let i = 0; i < maxHearts; i++) {
-          ctx.fillText('♥', hudX + 10 + hGap / 2 + i * hGap, hudY);
-        }
-
-        // 3. 실제 채워진 하트 그리기
-        drawHearts(hudX + 10, hudY, endlessLives, 'left', hSize);
+        const hudX = SIDE_L_X + SIDE_W / 2;
+        const hudY = GAME_Y - 30; // 시간 bar(16px 높이, 22px 위)의 중앙선과 맞춤
+        drawHearts(hudX, hudY, endlessLives, 'center');
         
         const breakT = failed ? (performance.now() - failedAt) / HEART_BREAK_MS : 1;
         if (failed && breakT < 1) {
-          // 방금 비워진 슬롯(index = 현재 목숨)에서 하트가 깨져 떨어진다
-          const slotX = hudX + 10 + hGap / 2 + endlessLives * hGap;
-          drawHeartBreak(slotX, hudY, breakT, hSize);
+          const gap = UI.gap;
+          // align 'center'에서 전체 목숨이 원래 (endlessLives + 1)개였을 때의 맨 오른쪽 하트 위치
+          const oldLives = endlessLives + 1;
+          const oldStartX = hudX - (oldLives - 1) * gap / 2;
+          const slotX = oldStartX + endlessLives * gap;
+          drawHeartBreak(slotX, hudY, breakT);
         }
       }
 
@@ -2047,10 +2031,10 @@
     }
 
     // 목숨 하트 그리기 (채워진 하트만 lives개). align 'left'는 x부터, 'center'는 x를 중앙 기준.
-    function drawHearts(x, y, lives, align, fontSize = 19) {
+    function drawHearts(x, y, lives, align) {
       if (lives <= 0) return;
-      const gap = fontSize + 6;
-      ctx.font = `${fontSize}px serif`;
+      const gap = UI.gap;
+      ctx.font = '19px serif';
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
       ctx.fillStyle = COLORS.timerRed;
@@ -2059,24 +2043,23 @@
     }
 
     // 잃은 하트 깨짐 연출: 두 조각이 갈라지며 떨어지고 페이드 아웃 (t: 0→1)
-    function drawHeartBreak(cx, cy, t, fontSize = 19) {
+    function drawHeartBreak(cx, cy, t) {
       const e = 1 - Math.pow(1 - t, 2); // 감속
       ctx.save();
       ctx.globalAlpha = Math.max(0, 1 - t);
-      ctx.font = `${fontSize}px serif`;
+      ctx.font = '19px serif';
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
       ctx.fillStyle = COLORS.timerRed;
       const drop = e * 14;
       const spread = e * 7;
       const tilt = e * 0.5;
-      const clipW = fontSize; // 하트 크기에 비례하는 클리핑 영역
       // 왼쪽 반쪽
       ctx.save();
       ctx.translate(cx - spread, cy + drop);
       ctx.rotate(-tilt);
       ctx.beginPath();
-      ctx.rect(-clipW, -clipW, clipW, clipW * 2); // 오른쪽 절반을 잘라 왼쪽 반쪽만 보이게
+      ctx.rect(-12, -12, 12, 24); // 오른쪽 절반을 잘라 왼쪽 반쪽만 보이게
       ctx.clip();
       ctx.fillText('♥', 0, 0);
       ctx.restore();
@@ -2085,7 +2068,7 @@
       ctx.translate(cx + spread, cy + drop);
       ctx.rotate(tilt);
       ctx.beginPath();
-      ctx.rect(0, -clipW, clipW, clipW * 2);
+      ctx.rect(0, -12, 12, 24);
       ctx.clip();
       ctx.fillText('♥', 0, 0);
       ctx.restore();
