@@ -1713,7 +1713,8 @@
       // 무한 모드 목숨 HUD (좌상단 하트) + 실패 시 깨짐 연출
       if (mode === 'endless') {
         const hudX = SIDE_L_X + SIDE_W / 2;
-        const hudY = GAME_Y - 30; // 시간 bar(16px 높이, 22px 위)의 중앙선과 맞춤
+        // 시간 bar(16px 높이, 22px 위)의 중앙선과 맞춤 + 이모지 시각 보정(+2px)
+        const hudY = GAME_Y - 30 + 2; 
         drawHearts(hudX, hudY, endlessLives, 'center');
         
         const breakT = failed ? (performance.now() - failedAt) / HEART_BREAK_MS : 1;
