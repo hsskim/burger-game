@@ -1707,7 +1707,7 @@
       ctx.fillStyle = COLORS.textSub;
       ctx.textAlign = 'center';
       ctx.textBaseline = 'top';
-      const header = mode === 'endless' ? `무한 모드 -- Round ${endlessRound}` : `Stage ${stage.id} — ${stage.name}`;
+      const header = mode === 'endless' ? `무한 모드 — Round ${endlessRound}` : `Stage ${stage.id} — ${stage.name}`;
       ctx.fillText(header, CANVAS_W / 2, 40);
 
       // 무한 모드 목숨 HUD (좌상단 하트) + 우상단 평균 별점
@@ -1732,7 +1732,7 @@
         const rightHudX = SIDE_R_X + SIDE_W / 2;
         const currentAvg = endlessClears > 0 ? (endlessStarSum / endlessClears).toFixed(1) : '-';
         ctx.fillStyle = COLORS.star;
-        ctx.font = uiFont(FONT.body, 'bold');
+        ctx.font = 'bold 18px Pretendard, sans-serif'; // 기존 20px에서 2pt(2px) 줄임
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
         ctx.fillText(`평균 ★ ${currentAvg}`, rightHudX, hudY);
@@ -1970,20 +1970,21 @@
           drawButton(cardCx - 110, cardCy + 35, 220, 44, '계속하기 (Enter)', () => endlessAfterFail());
           drawTextLink(cardCx, cardCy + 105, '타이틀로 나가기 (ESC)', exitPlay);
         } else {
-          // 목숨 소진: 런 종료 — 이번 런 요약(도달·평균) + 최고 기록
+          // 목숨 소진: 런 종료 — 전면 개선된 디자인
           const thisAvg = endlessClears > 0 ? (endlessStarSum / endlessClears).toFixed(1) : '-';
           const rec = loadEndlessRecord();
+          
           ctx.font = uiFont(FONT.h3, 'bold');
           ctx.fillStyle = COLORS.text;
-          ctx.fillText(`최종 도달 : ${endlessRound} 라운드`, cardCx, cardCy - 30);
+          ctx.fillText(`도달 라운드 : ${endlessRound}`, cardCx, cardCy - 30);
           
-          ctx.font = uiFont(FONT.body);
+          ctx.font = uiFont(FONT.h3, 'bold');
           ctx.fillStyle = COLORS.star;
-          ctx.fillText(`이번 런 평균 ★ ${thisAvg}`, cardCx, cardCy + 5);
-          
+          ctx.fillText(`평균 ★ ${thisAvg}`, cardCx, cardCy + 5);
+
           ctx.font = uiFont(FONT.bodySm);
           ctx.fillStyle = COLORS.textSub;
-          ctx.fillText(`최고 기록 : ${rec.bestRound} 라운드`, cardCx, cardCy + 35);
+          ctx.fillText(`(최고 기록 : ${rec.bestRound}라운드)`, cardCx, cardCy + 40);
           
           renderResultTextLinks(cardCx, cardCy + 85);
         }
@@ -2111,9 +2112,9 @@
 
       const cw = 360;
       let ch;
-      // 완료 팝업 높이: 무한 모드는 260, 스테이지 모드는 다음 판 유무에 따라 360 또는 320
+      // 완료 팝업 높이: 무한 모드는 280 (버튼 Y가 내려감에 따라 공간 확보), 스테이지 모드는 다음 판 유무에 따라 360 또는 320
       if (mode === 'endless') {
-        ch = 260;
+        ch = 280;
       } else {
         ch = hasNext() ? 360 : 320;
       }
@@ -2157,11 +2158,12 @@
         if (isEndless && endlessHeartEarned) {
           ctx.font = uiFont(FONT.bodySm, 'bold');
           ctx.fillStyle = COLORS.timerRed;
-          ctx.fillText('완벽 클리어! ♥ +1', cardCx, cardCy - 10);
+          ctx.fillText('완벽 클리어! ♥ +1', cardCx, cardCy + 5);
         }
-        const btnY = isEndless ? cardCy + 15 : cardCy;
+        // 무한 모드 실패 팝업과 동일한 정렬 및 간격 (btnY=cardCy+35, link=btnY+70)
+        const btnY = isEndless ? cardCy + 35 : cardCy;
         drawButton(cardCx - 110, btnY, 220, 44, isEndless ? '다음 주문 (Enter)' : '다음 스테이지 (Enter)', () => goNext());
-        renderResultTextLinks(cardCx, btnY + 70);
+        renderResultTextLinks(cardCx, btnY + (isEndless ? 70 : 80));
       } else {
         renderResultTextLinks(cardCx, cardCy + 60);
       }
