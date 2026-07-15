@@ -2207,11 +2207,14 @@
       overlayFull();
 
       // 팝업 카드
-      const boxW = 360;
-      const boxH = 200;
+      const boxW = 340;
+      const boxH = 240;
       const bx = (CANVAS_W - boxW) / 2;
       const by = (CANVAS_H - boxH) / 2;
-      drawCard(bx, by, boxW, boxH, 20);
+      drawCard(bx, by, boxW, boxH, UI.radius);
+
+      const cardCx = bx + boxW / 2;
+      const cardCy = by + boxH / 2;
 
       ctx.fillStyle = COLORS.text;
       ctx.font = uiFont(FONT.h3, 'bold');
@@ -2219,15 +2222,18 @@
       ctx.textBaseline = 'middle';
       const exitMsg = mode === 'endless' ? '타이틀로 나갈까요?' : '스테이지 선택으로 나갈까요?';
       const msg = confirming === 'restart' ? '다시 시작할까요?' : exitMsg;
-      ctx.fillText(msg, CANVAS_W / 2, by + 58);
+      ctx.fillText(msg, cardCx, cardCy - 40);
 
-      drawButton(CANVAS_W / 2 - 150, by + 113, 140, 42, '확인 (Enter)', () => {
+      // Primary Action (알약 버튼)
+      drawButton(cardCx - 110, cardCy + 15, 220, 44, '확인 (Enter)', () => {
         const action = confirming;
         confirming = null;
         if (action === 'restart') restartStage();
         else exitPlay();
       });
-      drawButton(CANVAS_W / 2 + 10, by + 113, 140, 42, '취소 (ESC)', () => {
+      
+      // Secondary Action (텍스트 링크)
+      drawTextLink(cardCx, cardCy + 85, '취소 (ESC)', () => {
         confirming = null;
       });
     }
