@@ -3,7 +3,7 @@
 
 <head>
   <meta charset="UTF-8">
-  <title>Burger Game v1</title>
+  <title>Burger Game v2</title>
   <link rel="stylesheet" as="style" crossorigin
     href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
   <style>
@@ -1484,7 +1484,7 @@
       ctx.shadowOffsetY = 4;
       ctx.fillStyle = COLORS.text;
       ctx.font = uiFont(FONT.hero, 'bold');
-      ctx.fillText('Burger Game v1', CANVAS_W / 2, cy - 15);
+      ctx.fillText('Burger Game v2', CANVAS_W / 2, cy - 15);
 
       // 그림자 초기화
       ctx.shadowColor = 'transparent';
@@ -1707,18 +1707,39 @@
       ctx.fillStyle = COLORS.textSub;
       ctx.textAlign = 'center';
       ctx.textBaseline = 'top';
-      const header = mode === 'endless' ? `라운드 ${endlessRound}` : `Stage ${stage.id} — ${stage.name}`;
+      const header = mode === 'endless' ? `무한 모드 -- Round ${endlessRound}` : `Stage ${stage.id} — ${stage.name}`;
       ctx.fillText(header, CANVAS_W / 2, 40);
 
-      // 무한 모드 목숨 HUD (좌상단 하트) + 실패 시 깨짐 연출
+      // 무한 모드 목숨 HUD (좌상단 하트 패널) + 실패 시 깨짐 연출
       if (mode === 'endless') {
-        drawHearts(HEADER_X, 40, endlessLives, 'left');
+        const hudX = HEADER_X;
+        const hudY = 32;
+        const hSize = 28; // 하트 폰트 크기
+        const hGap = hSize + 6; // 하트 간격
+        const maxHearts = ENDLESS.maxLives;
+        
+        // 1. 반투명 배경 패널 (HUD 느낌)
+        const panelW = maxHearts * hGap + 20;
+        const panelH = hSize + 16;
+        drawCard(hudX, hudY - panelH / 2, panelW, panelH, UI.radius / 2); // 살짝 덜 둥글게
+
+        // 2. 비어있는(소진된) 하트 배경 먼저 그리기
+        ctx.font = `${hSize}px serif`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillStyle = COLORS.starEmpty;
+        for (let i = 0; i < maxHearts; i++) {
+          ctx.fillText('♥', hudX + 10 + hGap / 2 + i * hGap, hudY);
+        }
+
+        // 3. 실제 채워진 하트 그리기
+        drawHearts(hudX + 10, hudY, endlessLives, 'left', hSize);
+        
         const breakT = failed ? (performance.now() - failedAt) / HEART_BREAK_MS : 1;
         if (failed && breakT < 1) {
           // 방금 비워진 슬롯(index = 현재 목숨)에서 하트가 깨져 떨어진다
-          const gap = UI.gap;
-          const slotX = HEADER_X + gap / 2 + endlessLives * gap;
-          drawHeartBreak(slotX, 40, breakT);
+          const slotX = hudX + 10 + hGap / 2 + endlessLives * hGap;
+          drawHeartBreak(slotX, hudY, breakT, hSize);
         }
       }
 
@@ -2026,10 +2047,10 @@
     }
 
     // 목숨 하트 그리기 (채워진 하트만 lives개). align 'left'는 x부터, 'center'는 x를 중앙 기준.
-    function drawHearts(x, y, lives, align) {
+    function drawHearts(x, y, lives, align, fontSize = 19) {
       if (lives <= 0) return;
-      const gap = UI.gap;
-      ctx.font = '19px serif';
+      const gap = fontSize + 6;
+      ctx.font = `${fontSize}px serif`;
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
       ctx.fillStyle = COLORS.timerRed;
@@ -2038,23 +2059,24 @@
     }
 
     // 잃은 하트 깨짐 연출: 두 조각이 갈라지며 떨어지고 페이드 아웃 (t: 0→1)
-    function drawHeartBreak(cx, cy, t) {
+    function drawHeartBreak(cx, cy, t, fontSize = 19) {
       const e = 1 - Math.pow(1 - t, 2); // 감속
       ctx.save();
       ctx.globalAlpha = Math.max(0, 1 - t);
-      ctx.font = '19px serif';
+      ctx.font = `${fontSize}px serif`;
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
       ctx.fillStyle = COLORS.timerRed;
       const drop = e * 14;
       const spread = e * 7;
       const tilt = e * 0.5;
+      const clipW = fontSize; // 하트 크기에 비례하는 클리핑 영역
       // 왼쪽 반쪽
       ctx.save();
       ctx.translate(cx - spread, cy + drop);
       ctx.rotate(-tilt);
       ctx.beginPath();
-      ctx.rect(-12, -12, 12, 24); // 오른쪽 절반을 잘라 왼쪽 반쪽만 보이게
+      ctx.rect(-clipW, -clipW, clipW, clipW * 2); // 오른쪽 절반을 잘라 왼쪽 반쪽만 보이게
       ctx.clip();
       ctx.fillText('♥', 0, 0);
       ctx.restore();
@@ -2063,7 +2085,7 @@
       ctx.translate(cx + spread, cy + drop);
       ctx.rotate(tilt);
       ctx.beginPath();
-      ctx.rect(0, -12, 12, 24);
+      ctx.rect(0, -clipW, clipW, clipW * 2);
       ctx.clip();
       ctx.fillText('♥', 0, 0);
       ctx.restore();
