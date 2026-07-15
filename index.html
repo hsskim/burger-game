@@ -1925,8 +1925,12 @@
 
         // 먹은 재료 체크 표시
         if (eaten) {
+          // 내가 먹은 순서(actualIndex)가 레시피 순서(i)와 일치하면 녹색(정상), 다르면 회색(감점 요인)
+          const actualIndex = names.indexOf(name);
+          const isCorrectOrder = (actualIndex === i);
+          
           ctx.font = uiFont(FONT.bodySm);
-          ctx.fillStyle = COLORS.check;
+          ctx.fillStyle = isCorrectOrder ? COLORS.check : COLORS.textSub;
           ctx.fillText('✓', panelCx + 44, y);
         }
       }
