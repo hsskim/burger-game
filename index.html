@@ -275,7 +275,7 @@
         recipe: ['patty', 'onion', 'tomato', 'cheese', 'lettuce'],
         grid: [
           '###########',
-          '#.S.#..O#.#',
+          '#S..#..O#.#',
           '#.#X#.#..T#',
           '#...X.#.#.#',
           '#.#..P#.#.#',
@@ -295,8 +295,8 @@
         recipe: ['patty', 'lettuce', 'cheese', 'tomato', 'onion', 'bacon'],
         grid: [
           '###########',
-          '#.#.....L.#',
-          '#S##.X###.#',
+          '#S#.....L.#',
+          '#.##.X###.#',
           '#...P.#X..#',
           '#######.#C#',
           '#.#....X#.#',
@@ -355,7 +355,7 @@
         recipe: ['patty', 'cheese', 'lettuce', 'tomato', 'onion', 'bacon', 'egg', 'pickle'],
         grid: [
           '#############',
-          '#.S.#...#...#',
+          '#S..#...#...#',
           '###.#.#.###.#',
           '#.#.P.#...#.#',
           '#.#######CX.#',
@@ -761,9 +761,12 @@
       const fl = floorsOf(g, N);
       if (fl.length < 1 + k + trapTarget + 6) return null;
 
-      // 시작점: 좌상단에 가까운 floor
-      const sorted = fl.slice().sort((a, b) => (a[0] + a[1]) - (b[0] + b[1]));
-      const S = sorted[Math.floor(Math.random() * Math.min(3, sorted.length))];
+      // 시작점: 맨 왼쪽 맨 윗 칸 (가장 좌상단)
+      const sorted = fl.slice().sort((a, b) => {
+        if (a[0] !== b[0]) return a[0] - b[0];
+        return a[1] - b[1];
+      });
+      const S = sorted[0];
       const key = (p) => p[0] + ',' + p[1];
 
       // 재료: 서로/시작점과 최소 거리 이상으로 흩뿌리기
@@ -1493,7 +1496,7 @@
 
       ctx.font = uiFont(FONT.bodySm);
       ctx.fillStyle = COLORS.textSub;
-      ctx.fillText('주문서 순서대로 재료를 먹어 버거를 완성하세요!', CANVAS_W / 2, cy + 38);
+      ctx.fillText('주문서 순서대로 재료를 먹어 버거를 완성하세요!', CANVAS_W / 2, cy + 34);
 
       // --- 좌우 나란히 배치되는 모드 선택 버튼 ---
       const btnW = 200;
@@ -1935,13 +1938,8 @@
       overlayFull();
 
       const cw = 340;
-      let ch;
-      // 실패 팝업 높이: 스테이지 모드 및 무한 모드(목숨 남음)는 300, 무한 모드 완전 실패는 264
-      if (mode === 'endless' && endlessLives <= 0) {
-        ch = 264;
-      } else {
-        ch = 300;
-      }
+      // 실패 팝업 높이는 항상 300으로 통일하여 여백과 크기가 달라지지 않도록 함
+      const ch = 300;
       
       const cx = (CANVAS_W - cw) / 2;
       const cy = (CANVAS_H - ch) / 2;
@@ -1972,12 +1970,16 @@
         } else {
           // 목숨 소진: 런 종료 — 전면 개선된 디자인 (한 줄로 표시)
           const thisAvg = endlessClears > 0 ? (endlessStarSum / endlessClears).toFixed(1) : '-';
+          const rec = loadEndlessRecord();
           
-          ctx.font = uiFont(FONT.h4, 'bold');
+          ctx.font = uiFont(FONT.bodySm); // 볼드 빼고 폰트 줄임
           ctx.fillStyle = COLORS.text;
-          ctx.fillText(`도달 라운드 ${endlessRound} · 평균 ★ ${thisAvg}`, cardCx, cardCy - 15);
+          ctx.fillText(`도달 라운드 ${endlessRound} · 평균 ★ ${thisAvg}`, cardCx, cardCy - 20);
+
+          ctx.fillStyle = COLORS.textSub;
+          ctx.fillText(`(최고 기록 : ${rec.bestRound}라운드)`, cardCx, cardCy + 5);
           
-          renderResultTextLinks(cardCx, cardCy + 60);
+          renderResultTextLinks(cardCx, cardCy + 55);
         }
       } else {
         ctx.font = uiFont(FONT.bodySm);
