@@ -1716,7 +1716,7 @@
 
         // 1. 좌상단 (주문서 위) 하트
         const hudX = SIDE_L_X + SIDE_W / 2;
-        drawHearts(hudX, hudY, endlessLives, 'center');
+        drawHearts(hudX, hudY, endlessLives, 'center', ENDLESS.maxLives);
         
         const breakT = failed ? (performance.now() - failedAt) / HEART_BREAK_MS : 1;
         if (failed && breakT < 1) {
@@ -1958,11 +1958,17 @@
 
       if (mode === 'endless') {
         if (endlessLives > 0) {
-          // 목숨 남음: 하트 표시 + 같은 맵 재도전
-          drawHearts(cardCx, cardCy - 30, endlessLives, 'center');
+          // 목숨 남음: 하트 차감 표시 및 계속하기 버튼
+          ctx.font = uiFont(FONT.h3, 'bold');
+          ctx.fillStyle = COLORS.timerRed;
+          ctx.fillText('♥ -1', cardCx, cardCy - 30);
+          
           ctx.font = uiFont(FONT.bodySm);
           ctx.fillStyle = COLORS.textSub;
-          ctx.fillText(`목숨 ${endlessLives}개 남음 · ${endlessRound}라운드 재도전`, cardCx, cardCy + 6);
+          ctx.fillText(`목숨 ${endlessLives}개 남음`, cardCx, cardCy + 5);
+          
+          drawButton(cardCx - 110, cardCy + 35, 220, 44, '계속하기 (Enter)', () => endlessAfterFail());
+          drawTextLink(cardCx, cardCy + 105, '타이틀로 나가기 (ESC)', exitPlay);
         } else {
           // 목숨 소진: 런 종료 — 이번 런 요약(도달·평균) + 최고 기록
           const thisAvg = endlessClears > 0 ? (endlessStarSum / endlessClears).toFixed(1) : '-';
@@ -1974,14 +1980,14 @@
           ctx.fillStyle = COLORS.textSub;
           ctx.fillText(`이번 런 · 평균 ★${thisAvg}`, cardCx, cardCy - 8);
           ctx.fillText(`최고 기록 ${rec.bestRound}라운드 · ★${rec.bestAvg.toFixed(1)}`, cardCx, cardCy + 18);
+          renderResultTextLinks(cardCx, cardCy + 55);
         }
       } else {
         ctx.font = uiFont(FONT.bodySm);
         ctx.fillStyle = COLORS.textSub;
         ctx.fillText(`"${failComment}"`, cardCx, cardCy - 20);
+        renderResultTextLinks(cardCx, cardCy + 55);
       }
-
-      renderResultTextLinks(cardCx, cardCy + 55);
     }
 
     // 우측 버거 스택 패널 (아래 → 위, 레이어형 SVG)
@@ -2042,15 +2048,23 @@
     }
 
     // 목숨 하트 그리기 (채워진 하트만 lives개). align 'left'는 x부터, 'center'는 x를 중앙 기준.
-    function drawHearts(x, y, lives, align) {
-      if (lives <= 0) return;
+    function drawHearts(x, y, lives, align, maxLives = 0) {
+      const total = Math.max(lives, maxLives);
+      if (total <= 0) return;
       const gap = UI.gap;
       ctx.font = '19px serif';
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
-      ctx.fillStyle = COLORS.timerRed;
-      const startX = align === 'center' ? x - (lives - 1) * gap / 2 : x + gap / 2;
-      for (let i = 0; i < lives; i++) ctx.fillText('♥', startX + i * gap, y);
+      const startX = align === 'center' ? x - (total - 1) * gap / 2 : x + gap / 2;
+      for (let i = 0; i < total; i++) {
+        if (i < lives) {
+          ctx.fillStyle = COLORS.timerRed;
+          ctx.fillText('♥', startX + i * gap, y);
+        } else {
+          ctx.fillStyle = COLORS.textSub;
+          ctx.fillText('♡', startX + i * gap, y);
+        }
+      }
     }
 
     // 잃은 하트 깨짐 연출: 두 조각이 갈라지며 떨어지고 페이드 아웃 (t: 0→1)
@@ -2092,9 +2106,9 @@
 
       const cw = 360;
       let ch;
-      // 완료 팝업 높이: 무한 모드는 324, 스테이지 모드는 다음 판 유무에 따라 360 또는 320
+      // 완료 팝업 높이: 무한 모드는 260, 스테이지 모드는 다음 판 유무에 따라 360 또는 320
       if (mode === 'endless') {
-        ch = 324;
+        ch = 260;
       } else {
         ch = hasNext() ? 360 : 320;
       }
@@ -2108,9 +2122,10 @@
       const cardCy = cy + ch / 2;
 
       const popupAge = performance.now() - completedAt - CLEAR_POPUP_DELAY_MS;
+      const isEndless = (mode === 'endless');
       // 다음 버튼이 있으면(showNext) 그 자리를 위해 제목·별을 위로 올린다
-      const titleY = cardCy + (showNext ? -105 : -90);
-      const starsY = cardCy + (showNext ? -50 : -30);
+      const titleY = cardCy + (isEndless ? -75 : (showNext ? -105 : -90));
+      const starsY = cardCy + (isEndless ? -25 : (showNext ? -50 : -30));
 
       let titleText = '버거 완성! 🎉';
       if (stars === 1) titleText = '일단 완성.. 😅';
@@ -2134,13 +2149,14 @@
 
       if (showNext) {
         // 무한 모드 3별 보상 안내
-        if (mode === 'endless' && endlessHeartEarned) {
+        if (isEndless && endlessHeartEarned) {
           ctx.font = uiFont(FONT.bodySm, 'bold');
           ctx.fillStyle = COLORS.timerRed;
-          ctx.fillText('완벽 클리어! ♥ +1', cardCx, cardCy - 16);
+          ctx.fillText('완벽 클리어! ♥ +1', cardCx, cardCy - 10);
         }
-        drawButton(cardCx - 110, cardCy, 220, 44, mode === 'endless' ? '다음 주문 (Enter)' : '다음 스테이지 (Enter)', () => goNext());
-        renderResultTextLinks(cardCx, cardCy + 80);
+        const btnY = isEndless ? cardCy + 15 : cardCy;
+        drawButton(cardCx - 110, btnY, 220, 44, isEndless ? '다음 주문 (Enter)' : '다음 스테이지 (Enter)', () => goNext());
+        renderResultTextLinks(cardCx, btnY + 80);
       } else {
         renderResultTextLinks(cardCx, cardCy + 60);
       }
@@ -2175,13 +2191,8 @@
     // 결과 화면 공통 텍스트 링크 (모드·상황별)
     function renderResultTextLinks(x, y) {
       if (mode === 'endless') {
-        if (failed && endlessLives > 0) {
-          drawTextLink(x, y, '계속하기 (Enter)', () => endlessAfterFail());
-          drawTextLink(x, y + 36, '타이틀로 나가기 (ESC)', exitPlay);
-        } else {
-          // 성공(완료) 화면이거나, 무한 모드 완전 실패(목숨 0)일 때는 재시도 버튼 없음
-          drawTextLink(x, y, '타이틀로 나가기 (ESC)', exitPlay);
-        }
+        // 성공(완료) 화면이거나, 무한 모드 완전 실패(목숨 0)일 때는 재시도 버튼 없음
+        drawTextLink(x, y, '타이틀로 나가기 (ESC)', exitPlay);
       } else {
         drawTextLink(x, y, '다시 하기 (R)', () => restartStage());
         drawTextLink(x, y + 36, '스테이지 선택 (ESC)', exitToSelect);
