@@ -1493,7 +1493,7 @@
 
       ctx.font = uiFont(FONT.bodySm);
       ctx.fillStyle = COLORS.textSub;
-      ctx.fillText('주문서 순서대로 재료를 먹어 버거를 완성하세요!', CANVAS_W / 2, cy + 30);
+      ctx.fillText('주문서 순서대로 재료를 먹어 버거를 완성하세요!', CANVAS_W / 2, cy + 38);
 
       // --- 좌우 나란히 배치되는 모드 선택 버튼 ---
       const btnW = 200;
@@ -1970,23 +1970,14 @@
           drawButton(cardCx - 110, cardCy + 35, 220, 44, '계속하기 (Enter)', () => endlessAfterFail());
           drawTextLink(cardCx, cardCy + 105, '타이틀로 나가기 (ESC)', exitPlay);
         } else {
-          // 목숨 소진: 런 종료 — 전면 개선된 디자인
+          // 목숨 소진: 런 종료 — 전면 개선된 디자인 (한 줄로 표시)
           const thisAvg = endlessClears > 0 ? (endlessStarSum / endlessClears).toFixed(1) : '-';
-          const rec = loadEndlessRecord();
           
-          ctx.font = uiFont(FONT.h3, 'bold');
+          ctx.font = uiFont(FONT.h4, 'bold');
           ctx.fillStyle = COLORS.text;
-          ctx.fillText(`도달 라운드 : ${endlessRound}`, cardCx, cardCy - 30);
+          ctx.fillText(`도달 라운드 ${endlessRound} · 평균 ★ ${thisAvg}`, cardCx, cardCy - 15);
           
-          ctx.font = uiFont(FONT.h3, 'bold');
-          ctx.fillStyle = COLORS.star;
-          ctx.fillText(`평균 ★ ${thisAvg}`, cardCx, cardCy + 5);
-
-          ctx.font = uiFont(FONT.bodySm);
-          ctx.fillStyle = COLORS.textSub;
-          ctx.fillText(`(최고 기록 : ${rec.bestRound}라운드)`, cardCx, cardCy + 40);
-          
-          renderResultTextLinks(cardCx, cardCy + 85);
+          renderResultTextLinks(cardCx, cardCy + 60);
         }
       } else {
         ctx.font = uiFont(FONT.bodySm);
@@ -2160,8 +2151,8 @@
           ctx.fillStyle = COLORS.timerRed;
           ctx.fillText('완벽 클리어! ♥ +1', cardCx, cardCy + 5);
         }
-        // 무한 모드 실패 팝업과 동일한 정렬 및 간격 (btnY=cardCy+35, link=btnY+70)
-        const btnY = isEndless ? cardCy + 35 : cardCy;
+        // 무한 모드 클리어 팝업의 두 버튼을 조금 더 위로 올림
+        const btnY = isEndless ? cardCy + 25 : cardCy;
         drawButton(cardCx - 110, btnY, 220, 44, isEndless ? '다음 주문 (Enter)' : '다음 스테이지 (Enter)', () => goNext());
         renderResultTextLinks(cardCx, btnY + (isEndless ? 70 : 80));
       } else {
