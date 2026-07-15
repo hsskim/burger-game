@@ -1710,11 +1710,12 @@
       const header = mode === 'endless' ? `무한 모드 -- Round ${endlessRound}` : `Stage ${stage.id} — ${stage.name}`;
       ctx.fillText(header, CANVAS_W / 2, 40);
 
-      // 무한 모드 목숨 HUD (좌상단 하트) + 실패 시 깨짐 연출
+      // 무한 모드 목숨 HUD (좌상단 하트) + 우상단 평균 별점
       if (mode === 'endless') {
-        const hudX = SIDE_L_X + SIDE_W / 2;
-        // 시간 bar(16px 높이, 22px 위)의 중앙선과 맞춤 + 이모지 시각 보정(+2px)
         const hudY = GAME_Y - 30 + 2; 
+
+        // 1. 좌상단 (주문서 위) 하트
+        const hudX = SIDE_L_X + SIDE_W / 2;
         drawHearts(hudX, hudY, endlessLives, 'center');
         
         const breakT = failed ? (performance.now() - failedAt) / HEART_BREAK_MS : 1;
@@ -1726,6 +1727,15 @@
           const slotX = oldStartX + endlessLives * gap;
           drawHeartBreak(slotX, hudY, breakT);
         }
+
+        // 2. 우상단 (내 버거 위) 평균 별점
+        const rightHudX = SIDE_R_X + SIDE_W / 2;
+        const currentAvg = endlessClears > 0 ? (endlessStarSum / endlessClears).toFixed(1) : '-';
+        ctx.fillStyle = COLORS.starFull;
+        ctx.font = uiFont(FONT.bodyLg, 'bold');
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(`평균 ★ ${currentAvg}`, rightHudX, hudY);
       }
 
       renderTimeBar();
