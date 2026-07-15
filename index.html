@@ -32,7 +32,7 @@
 
     // ===== 상수 =====
 
-    // 색상 팔레트 (디자인 시스템)
+    // 디자인 시스템 - 색상
     const COLORS = {
       bg: '#fff9e6',
       panel: '#fffdf5',
@@ -57,6 +57,28 @@
       highlight: '#fff4e0',
       highlightBorder: '#f0a868',
       check: '#7fa96e',
+    };
+
+    // 디자인 시스템 - 폰트 크기
+    const FONT = {
+      hero: 56,       // 메인 타이틀
+      h1: 38,         // 대형 팝업 타이틀
+      h2: 28,         // 팝업창 기본 제목
+      h3: 24,         // 서브 제목
+      h4: 22,         // 주요 강조 (큰 버튼 등)
+      bodyLg: 20,     // 온보딩 본문 등
+      body: 18,       // 일반 버튼, 기본 텍스트
+      bodySm: 16,     // 부가 설명
+      caption: 14,    // 보조 텍스트
+      small: 13,      // 최소형 보조 텍스트
+    };
+
+    // 디자인 시스템 - 레이아웃 여백 및 규격
+    const UI = {
+      radius: 22,           // 공통 모서리 둥글기
+      btnW: 240,            // 버튼 기본 너비
+      btnH: 54,             // 버튼 기본 높이
+      gap: 24,              // 카드나 버튼 사이 기본 간격
     };
     const CANVAS_W = 960;
     const CANVAS_H = 640;
@@ -949,18 +971,22 @@
       }
     }
 
-    // 온보딩: 아직 안 봤으면 팝업 표시 (localStorage에 본 기록)
+    // 온보딩: 스토리 모드는 1회만, 무한 모드는 매번 표시
     function maybeOnboard(kind, condition) {
       if (!condition) return;
-      const key = kind === 'endless' ? ONBOARD_ENDLESS_KEY : ONBOARD_STORY_KEY;
-      if (localStorage.getItem(key)) return;
+      if (kind === 'endless') {
+        onboarding = kind;
+        return;
+      }
+      if (localStorage.getItem(ONBOARD_STORY_KEY)) return;
       onboarding = kind;
     }
 
     function dismissOnboarding() {
       if (!onboarding) return;
-      const key = onboarding === 'endless' ? ONBOARD_ENDLESS_KEY : ONBOARD_STORY_KEY;
-      try { localStorage.setItem(key, '1'); } catch { /* 저장 실패는 무시 */ }
+      if (onboarding === 'story') {
+        try { localStorage.setItem(ONBOARD_STORY_KEY, '1'); } catch { /* 저장 실패는 무시 */ }
+      }
       onboarding = null;
     }
 
@@ -1192,7 +1218,7 @@
 
       // 버튼 텍스트
       ctx.fillStyle = COLORS.text;
-      ctx.font = uiFont(18, 'bold');
+      ctx.font = uiFont(FONT.body, 'bold');
       ctx.textAlign = 'center';
       fillTextVCenter(label, x + w / 2, y + push + h / 2);
 
@@ -1224,13 +1250,13 @@
 
       // 타이틀
       ctx.fillStyle = COLORS.text;
-      ctx.font = uiFont(22, 'bold');
+      ctx.font = uiFont(FONT.h4, 'bold');
       ctx.textAlign = 'center';
       fillTextVCenter(title, x + w / 2, y + push + h / 2 - 10);
 
       // 서브타이틀
       ctx.fillStyle = COLORS.textSub;
-      ctx.font = uiFont(14);
+      ctx.font = uiFont(FONT.caption);
       fillTextVCenter(subtitle, x + w / 2, y + push + h / 2 + 14);
 
       hitAreas.push({ x, y, w, h, action });
@@ -1255,7 +1281,7 @@
     function drawPanelHeader(panelX, title) {
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
-      ctx.font = uiFont(18, 'bold');
+      ctx.font = uiFont(FONT.body, 'bold');
       ctx.fillStyle = COLORS.text;
       ctx.fillText(title, panelX + SIDE_W / 2, GAME_Y + 28);
 
@@ -1457,7 +1483,7 @@
       ctx.shadowBlur = 10;
       ctx.shadowOffsetY = 4;
       ctx.fillStyle = COLORS.text;
-      ctx.font = uiFont(56, 'bold');
+      ctx.font = uiFont(FONT.hero, 'bold');
       ctx.fillText('Burger Game v1', CANVAS_W / 2, cy - 15);
 
       // 그림자 초기화
@@ -1465,18 +1491,18 @@
       ctx.shadowBlur = 0;
       ctx.shadowOffsetY = 0;
 
-      ctx.font = uiFont(16);
+      ctx.font = uiFont(FONT.bodySm);
       ctx.fillStyle = COLORS.textSub;
       ctx.fillText('주문서 순서대로 재료를 먹어 버거를 완성하세요!', CANVAS_W / 2, cy + 30);
 
       // --- 좌우 나란히 배치되는 모드 선택 버튼 ---
       const btnW = 200;
       const btnH = 66;
-      const gap = 24;
+      const gap = UI.gap;
       const leftX = CANVAS_W / 2 - btnW - gap / 2;
       const rightX = CANVAS_W / 2 + gap / 2;
-      // 버튼들은 cy 기준으로 살짝 더 위로 올림
-      const btnY = cy + 85;
+      // 버튼 위치를 살짝 위로 다시 조정
+      const btnY = cy + 90;
 
       // 1. 스테이지 모드
       drawModeButton(leftX, btnY, btnW, btnH, '스테이지 모드', 'Enter 눌러 시작', THEME_STAGE, () => {
@@ -1492,9 +1518,10 @@
         ? '모든 스테이지 클리어!' 
         : `스테이지 ${clearedCount + 1} 진행 중`;
 
-      ctx.font = uiFont(14);
+      ctx.font = uiFont(FONT.caption);
       ctx.fillStyle = COLORS.textSub;
-      ctx.fillText(stageRecord, leftX + btnW / 2, btnY + btnH + 32);
+      // 텍스트 간격을 아주 살짝 줄임 (32 -> 28)
+      ctx.fillText(stageRecord, leftX + btnW / 2, btnY + btnH + 28);
 
       // 2. 무한 모드
       drawModeButton(rightX, btnY, btnW, btnH, '무한 모드', 'Space 눌러 시작', THEME_ENDLESS, () => {
@@ -1506,12 +1533,13 @@
         ? `최고: ${rec.bestRound}라운드 · 평균 ★${rec.bestAvg.toFixed(1)}`
         : '한계에 도전하세요!';
 
-      ctx.font = uiFont(14);
+      ctx.font = uiFont(FONT.caption);
       ctx.fillStyle = COLORS.textSub;
-      ctx.fillText(endlessRecord, rightX + btnW / 2, btnY + btnH + 32);
+      // 텍스트 간격을 아주 살짝 줄임 (32 -> 28)
+      ctx.fillText(endlessRecord, rightX + btnW / 2, btnY + btnH + 28);
 
       // 개발자 크레딧
-      ctx.font = uiFont(14);
+      ctx.font = uiFont(FONT.caption);
       ctx.fillStyle = '#b0a89a';
       ctx.fillText('Developed by hsskim', CANVAS_W / 2, CANVAS_H - 24);
     }
@@ -1565,7 +1593,7 @@
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
       ctx.fillStyle = COLORS.text;
-      ctx.font = uiFont(28, 'bold');
+      ctx.font = uiFont(FONT.h2, 'bold');
       ctx.fillText('스테이지 선택', CANVAS_W / 2, titleY);
 
       ctx.shadowColor = 'transparent';
@@ -1639,11 +1667,11 @@
         } else {
           // 해금된 스테이지: 미니멀리즘 테마 (숫자, 텍스트, 별)
           ctx.fillStyle = COLORS.text; // 다른 글자 색과 동일하게
-          ctx.font = uiFont(38, 'bold'); // 숫자 크기 줄임
+          ctx.font = uiFont(FONT.h1, 'bold'); // 숫자 크기 줄임
           ctx.fillText(String(data.id), x + cardW / 2, cardY + 46); // 전체적으로 위로 올림
 
           ctx.fillStyle = COLORS.text;
-          ctx.font = uiFont(18); // 제목 크기 키움
+          ctx.font = uiFont(FONT.body); // 제목 크기 키움
           ctx.fillText(data.name, x + cardW / 2, cardY + 92); // 전체적으로 위로 올림
 
           const earned = save[data.id] || 0;
@@ -1665,7 +1693,7 @@
         }
       }
 
-      ctx.font = uiFont(14);
+      ctx.font = uiFont(FONT.caption);
       ctx.fillStyle = COLORS.textSub;
       ctx.fillText('선택: ← ↑ ↓ → | 시작: Enter | 타이틀로: ESC', CANVAS_W / 2, CANVAS_H - 40);
     }
@@ -1675,7 +1703,7 @@
       const { x: ox, y: oy } = mapOffset();
 
       // 스테이지 이름 (중앙 정렬)
-      ctx.font = uiFont(22, 'bold'); // 글씨 크기 키움
+      ctx.font = uiFont(FONT.h4, 'bold'); // 글씨 크기 키움
       ctx.fillStyle = COLORS.textSub;
       ctx.textAlign = 'center';
       ctx.textBaseline = 'top';
@@ -1688,7 +1716,7 @@
         const breakT = failed ? (performance.now() - failedAt) / HEART_BREAK_MS : 1;
         if (failed && breakT < 1) {
           // 방금 비워진 슬롯(index = 현재 목숨)에서 하트가 깨져 떨어진다
-          const gap = 24;
+          const gap = UI.gap;
           const slotX = HEADER_X + gap / 2 + endlessLives * gap;
           drawHeartBreak(slotX, 40, breakT);
         }
@@ -1780,7 +1808,7 @@
       ctx.restore(); // 흔들림은 게임 영역에만 적용
 
       // 하단 조작 안내
-      ctx.font = uiFont(14);
+      ctx.font = uiFont(FONT.caption);
       ctx.fillStyle = COLORS.textSub;
       ctx.textAlign = 'center';
       ctx.textBaseline = 'top';
@@ -1833,7 +1861,7 @@
       }
 
       ctx.fillStyle = COLORS.text;
-      ctx.font = uiFont(15, 'bold');
+      ctx.font = uiFont(FONT.bodySm, 'bold');
       ctx.textAlign = 'right';
       ctx.textBaseline = 'middle';
       ctx.fillText(textStr, bx + GAME_SIZE, by + barH / 2 + 1);
@@ -1868,7 +1896,7 @@
         }
 
         ctx.globalAlpha = eaten ? 0.35 : 1;
-        ctx.font = uiFont(15);
+        ctx.font = uiFont(FONT.bodySm);
         ctx.fillStyle = COLORS.text;
         ctx.textAlign = 'right';
         ctx.fillText(`${i + 1}.`, panelCx - 34, y);
@@ -1879,7 +1907,7 @@
 
         // 먹은 재료 체크 표시
         if (eaten) {
-          ctx.font = uiFont(16);
+          ctx.font = uiFont(FONT.bodySm);
           ctx.fillStyle = COLORS.check;
           ctx.fillText('✓', panelCx + 44, y);
         }
@@ -1891,10 +1919,17 @@
       overlayFull();
 
       const cw = 340;
-      const ch = 300;
+      let ch;
+      // 실패 팝업 높이: 스테이지 모드 및 무한 모드(목숨 남음)는 300, 무한 모드 완전 실패는 264
+      if (mode === 'endless' && endlessLives <= 0) {
+        ch = 264;
+      } else {
+        ch = 300;
+      }
+      
       const cx = (CANVAS_W - cw) / 2;
       const cy = (CANVAS_H - ch) / 2;
-      drawCard(cx, cy, cw, ch, 20);
+      drawCard(cx, cy, cw, ch, UI.radius);
 
       const cardCx = cx + cw / 2;
       const cardCy = cy + ch / 2;
@@ -1902,30 +1937,30 @@
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
       ctx.fillStyle = COLORS.text;
-      ctx.font = uiFont(28, 'bold');
+      ctx.font = uiFont(FONT.h2, 'bold');
       ctx.fillText(failedReason === 'trap' ? '영업 실패... 😥' : '시간 초과... ⏰', cardCx, cardCy - 80);
 
       if (mode === 'endless') {
         if (endlessLives > 0) {
           // 목숨 남음: 하트 표시 + 같은 맵 재도전
           drawHearts(cardCx, cardCy - 30, endlessLives, 'center');
-          ctx.font = uiFont(15);
+          ctx.font = uiFont(FONT.bodySm);
           ctx.fillStyle = COLORS.textSub;
           ctx.fillText(`목숨 ${endlessLives}개 남음 · ${endlessRound}라운드 재도전`, cardCx, cardCy + 6);
         } else {
           // 목숨 소진: 런 종료 — 이번 런 요약(도달·평균) + 최고 기록
           const thisAvg = endlessClears > 0 ? (endlessStarSum / endlessClears).toFixed(1) : '-';
           const rec = loadEndlessRecord();
-          ctx.font = uiFont(20, 'bold');
+          ctx.font = uiFont(FONT.bodyLg, 'bold');
           ctx.fillStyle = COLORS.text;
           ctx.fillText(`${endlessRound}라운드에서 멈췄어요`, cardCx, cardCy - 36);
-          ctx.font = uiFont(15);
+          ctx.font = uiFont(FONT.bodySm);
           ctx.fillStyle = COLORS.textSub;
           ctx.fillText(`이번 런 · 평균 ★${thisAvg}`, cardCx, cardCy - 8);
           ctx.fillText(`최고 기록 ${rec.bestRound}라운드 · ★${rec.bestAvg.toFixed(1)}`, cardCx, cardCy + 18);
         }
       } else {
-        ctx.font = uiFont(16);
+        ctx.font = uiFont(FONT.bodySm);
         ctx.fillStyle = COLORS.textSub;
         ctx.fillText(`"${failComment}"`, cardCx, cardCy - 20);
       }
@@ -1948,7 +1983,7 @@
 
       // 스택이 비어 있을 때 안내
       if (stack.length === 0 && !completed) {
-        ctx.font = uiFont(13);
+        ctx.font = uiFont(FONT.small);
         ctx.fillStyle = COLORS.textSub;
         ctx.fillText('재료를 모아보세요!', panelCx, baseY - 50);
       }
@@ -1993,7 +2028,7 @@
     // 목숨 하트 그리기 (채워진 하트만 lives개). align 'left'는 x부터, 'center'는 x를 중앙 기준.
     function drawHearts(x, y, lives, align) {
       if (lives <= 0) return;
-      const gap = 24;
+      const gap = UI.gap;
       ctx.font = '19px serif';
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
@@ -2039,12 +2074,19 @@
     function renderClearPopup() {
       overlayFull();
 
-      const showNext = hasNext();
       const cw = 360;
-      const ch = showNext ? 360 : 320;
+      let ch;
+      // 완료 팝업 높이: 무한 모드는 324, 스테이지 모드는 다음 판 유무에 따라 360 또는 320
+      if (mode === 'endless') {
+        ch = 324;
+      } else {
+        ch = hasNext() ? 360 : 320;
+      }
+      const showNext = hasNext();
+      
       const cx = (CANVAS_W - cw) / 2;
       const cy = (CANVAS_H - ch) / 2;
-      drawCard(cx, cy, cw, ch, 20);
+      drawCard(cx, cy, cw, ch, UI.radius);
 
       const cardCx = cx + cw / 2;
       const cardCy = cy + ch / 2;
@@ -2061,7 +2103,7 @@
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
       ctx.fillStyle = COLORS.text;
-      ctx.font = uiFont(30, 'bold');
+      ctx.font = uiFont(FONT.h2, 'bold');
       ctx.fillText(titleText, cardCx, titleY);
 
       // 별점: 하나씩 통통 튀며 등장
@@ -2077,7 +2119,7 @@
       if (showNext) {
         // 무한 모드 3별 보상 안내
         if (mode === 'endless' && endlessHeartEarned) {
-          ctx.font = uiFont(16, 'bold');
+          ctx.font = uiFont(FONT.bodySm, 'bold');
           ctx.fillStyle = COLORS.timerRed;
           ctx.fillText('완벽 클리어! ♥ +1', cardCx, cardCy - 16);
         }
@@ -2090,7 +2132,7 @@
 
     // 텍스트 형태의 링크 버튼을 그리는 헬퍼 함수
     function drawTextLink(x, y, text, action) {
-      ctx.font = uiFont(16, 'bold');
+      ctx.font = uiFont(FONT.bodySm, 'bold');
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
 
@@ -2117,12 +2159,12 @@
     // 결과 화면 공통 텍스트 링크 (모드·상황별)
     function renderResultTextLinks(x, y) {
       if (mode === 'endless') {
-        if (failed) {
-          if (endlessLives > 0) drawTextLink(x, y, '계속하기 (Enter)', () => endlessAfterFail());
-          else drawTextLink(x, y, '새 게임 (R)', () => endlessAfterFail());
-          drawTextLink(x, y + 36, '타이틀 (ESC)', exitPlay);
+        if (failed && endlessLives > 0) {
+          drawTextLink(x, y, '계속하기 (Enter)', () => endlessAfterFail());
+          drawTextLink(x, y + 36, '타이틀로 나가기 (ESC)', exitPlay);
         } else {
-          drawTextLink(x, y, '타이틀 (ESC)', exitPlay);
+          // 성공(완료) 화면이거나, 무한 모드 완전 실패(목숨 0)일 때는 재시도 버튼 없음
+          drawTextLink(x, y, '타이틀로 나가기 (ESC)', exitPlay);
         }
       } else {
         drawTextLink(x, y, '다시 하기 (R)', () => restartStage());
@@ -2142,7 +2184,7 @@
       drawCard(bx, by, boxW, boxH, 20);
 
       ctx.fillStyle = COLORS.text;
-      ctx.font = uiFont(24, 'bold');
+      ctx.font = uiFont(FONT.h3, 'bold');
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
       const exitMsg = mode === 'endless' ? '타이틀로 나갈까요?' : '스테이지 선택으로 나갈까요?';
@@ -2176,54 +2218,40 @@
 
     function renderOnboardingPopup() {
       overlayFull();
-      const rows = onboarding === 'endless' ? ONBOARD_ROWS_ENDLESS : ONBOARD_ROWS_STORY;
+      const isEndless = (onboarding === 'endless');
+      const rows = isEndless ? ONBOARD_ROWS_ENDLESS : ONBOARD_ROWS_STORY;
       
       const iconSize = 30;
-      const fontSize = 20;
-      const textGap = 16; // 아이콘과 텍스트 사이 간격
+      const fontSize = FONT.bodyLg;
+      const textGap = 16; 
 
-      // 1. 텍스트 파싱 및 최대 너비 계산
-      let maxRowW = 0;
-      const parsedRows = rows.map(([icon, text]) => {
-        const parts = text.split('*');
-        let textW = 0;
-        for (let i = 0; i < parts.length; i++) {
-          if (!parts[i]) continue;
-          ctx.font = uiFont(fontSize, (i % 2 === 1) ? 'bold' : 'normal');
-          textW += ctx.measureText(parts[i]).width;
-        }
-        const rowW = iconSize + textGap + textW;
-        if (rowW > maxRowW) maxRowW = rowW;
-        return { icon, parts, textW };
-      });
-
-      // 2. 카드 크기 및 위치 동적 계산 (좌우 완벽 대칭)
-      const paddingX = 46; // 좌우 여백
-      const cw = Math.max(440, maxRowW + paddingX * 2);
-      // 상단여백 40 + 줄길이 + 버튼 위 여백 36 + 버튼 50 + 하단여백 30
-      const ch = 40 + rows.length * 56 + 36 + 50 + 30; 
+      // 1. 팝업 크기 명시적 하드코딩
+      const cw = isEndless ? 540 : 440;
+      const ch = isEndless ? 400 : 340;
+      
       const cx = (CANVAS_W - cw) / 2;
       const cy = (CANVAS_H - ch) / 2;
       const cardCx = cx + cw / 2;
 
-      drawCard(cx, cy, cw, ch, 22);
+      drawCard(cx, cy, cw, ch, UI.radius);
 
-      // 3. 규칙 행 그리기 (가장 긴 줄을 기준으로 블록 전체를 중앙 정렬)
-      const blockStartX = cx + (cw - maxRowW) / 2;
-      let ry = cy + 40 + 28; // 상단 여백 40 + 줄 간격의 절반
+      // 2. 규칙 행 그리기
+      const blockStartX = cx + 50; // 좌우 여백을 고정값으로 처리
+      const marginTop = 48;
+      let ry = cy + marginTop + 28; // 상단 여백 + 줄 간격의 절반
       
-      for (const { icon, parts } of parsedRows) {
+      for (const [icon, text] of rows) {
         // 아이콘 렌더링
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
         ctx.fillStyle = (icon === '♥' || icon === '💔') ? COLORS.timerRed : COLORS.text;
         ctx.font = `${iconSize}px serif`;
-        // 이모지(아이콘)가 시각적으로 살짝 떠보이는 현상을 보정하기 위해 y축 +2
         ctx.fillText(icon, blockStartX + iconSize / 2, ry + 2);
 
-        // 텍스트 렌더링
+        // 텍스트 렌더링 (볼드 파싱)
         ctx.textAlign = 'left';
         let currentX = blockStartX + iconSize + textGap;
+        const parts = text.split('*');
         for (let i = 0; i < parts.length; i++) {
           if (!parts[i]) continue;
           const isBold = i % 2 === 1;
@@ -2235,8 +2263,11 @@
         ry += 56;
       }
 
-      // 시작 버튼 (하단 여백 30 확보)
-      drawButton(cardCx - 110, cy + ch - 80, 220, 50, '시작! (Enter)', () => dismissOnboarding());
+      // 3. 시작 버튼
+      const btnW = UI.btnW;
+      const btnH = UI.btnH;
+      const marginBot = 36;
+      drawButton(cardCx - btnW / 2, cy + ch - (btnH + marginBot), btnW, btnH, '시작! (Enter)', () => dismissOnboarding());
     }
 
     let lastTime = performance.now();
