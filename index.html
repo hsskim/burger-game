@@ -1197,22 +1197,40 @@
     }
 
     // 버튼을 그리고 클릭 영역으로 등록
-    function drawButton(x, y, w, h, label, action) {
+    function drawButton(x, y, w, h, label, action, variant = 'primary') {
       const hovered = lastMouse.x >= x && lastMouse.x <= x + w
         && lastMouse.y >= y && lastMouse.y <= y + h;
 
       const push = hovered ? 4 : 0; // 호버 시 버튼이 눌리는 깊이
       const radius = h / 2;         // 완전한 둥근 알약(pill) 형태
 
+      let shadowColor, faceColor, strokeColor, hoverShadow, hoverFace, hoverStroke;
+
+      if (variant === 'secondary') {
+        shadowColor = '#c4b9b0';
+        faceColor = '#ebe6e1';
+        strokeColor = '#d6cdc4';
+        hoverShadow = '#b3a89f';
+        hoverFace = '#dfdad4';
+        hoverStroke = '#c4b9b0';
+      } else {
+        shadowColor = COLORS.accentBorder;
+        faceColor = COLORS.accentSoft;
+        strokeColor = COLORS.accentBorder;
+        hoverShadow = '#e0b88f';
+        hoverFace = '#ffeed0';
+        hoverStroke = COLORS.accent;
+      }
+
       // 버튼 하단 그림자 (3D 깊이)
-      ctx.fillStyle = hovered ? '#e0b88f' : COLORS.accentBorder;
+      ctx.fillStyle = hovered ? hoverShadow : shadowColor;
       ctx.beginPath();
       ctx.roundRect(x, y + 4, w, h, radius);
       ctx.fill();
 
       // 버튼 윗면
-      ctx.fillStyle = hovered ? '#ffeed0' : COLORS.accentSoft;
-      ctx.strokeStyle = hovered ? COLORS.accent : COLORS.accentBorder;
+      ctx.fillStyle = hovered ? hoverFace : faceColor;
+      ctx.strokeStyle = hovered ? hoverStroke : strokeColor;
       ctx.lineWidth = 2;
       ctx.beginPath();
       ctx.roundRect(x, y + push, w, h, radius);
@@ -2208,7 +2226,7 @@
 
       // 팝업 카드
       const boxW = 340;
-      const boxH = 240;
+      const boxH = 200;
       const bx = (CANVAS_W - boxW) / 2;
       const by = (CANVAS_H - boxH) / 2;
       drawCard(bx, by, boxW, boxH, UI.radius);
@@ -2222,20 +2240,27 @@
       ctx.textBaseline = 'middle';
       const exitMsg = mode === 'endless' ? '타이틀로 나갈까요?' : '스테이지 선택으로 나갈까요?';
       const msg = confirming === 'restart' ? '다시 시작할까요?' : exitMsg;
-      ctx.fillText(msg, cardCx, cardCy - 40);
+      ctx.fillText(msg, cardCx, cardCy - 30);
+
+      const btnW = 130;
+      const btnH = 44;
+      const gap = 16;
+      const leftX = cardCx - btnW - gap / 2;
+      const rightX = cardCx + gap / 2;
+      const btnY = cardCy + 20;
 
       // Primary Action (알약 버튼)
-      drawButton(cardCx - 110, cardCy + 15, 220, 44, '확인 (Enter)', () => {
+      drawButton(leftX, btnY, btnW, btnH, '확인 (Enter)', () => {
         const action = confirming;
         confirming = null;
         if (action === 'restart') restartStage();
         else exitPlay();
       });
       
-      // Secondary Action (텍스트 링크)
-      drawTextLink(cardCx, cardCy + 85, '취소 (ESC)', () => {
+      // Secondary Action (회색 알약 버튼)
+      drawButton(rightX, btnY, btnW, btnH, '취소 (ESC)', () => {
         confirming = null;
-      });
+      }, 'secondary');
     }
 
     // 온보딩 팝업 내용
