@@ -73,9 +73,9 @@
   <div id="mobileNotice">
     <div class="card">
       <div class="emoji">🍔🎮</div>
-      <h1>PC에서 즐겨주세요!</h1>
-      <p>이 게임은 키보드로 조작해요.<br>데스크톱이나 노트북에서 방문하면<br>바로 플레이할 수 있어요.</p>
-      <button id="mobileNoticeClose">그래도 둘러보기</button>
+      <h1 id="mobileNoticeTitle"></h1>
+      <p id="mobileNoticeBody"></p>
+      <button id="mobileNoticeClose"></button>
     </div>
   </div>
   <script>
@@ -205,23 +205,228 @@
       maxLives: 3,        // 목숨 상한 (실패로 잃은 뒤 3별 클리어로 회복, 이 값을 넘지는 않음)
     };
 
-    // 실패 화면 랜덤 코멘트
-    const FAIL_COMMENTS_TRAP = [
-      '이건... 판매할 수 없어요',
-      '손님이 도망갔어요',
-      '주방장이 울고 있어요',
-      '이 버거, 살아 움직일 것 같아요',
-      '위생 검사관이 오고 있습니다',
-      '냄새가... 심상치 않은데요',
-      '이건 버거가 아니라 사건입니다',
-    ];
-    const FAIL_COMMENTS_TIMEOUT = [
-      '손님이 화내며 나갔어요',
-      '패티가 다 식어버렸어요',
-      '오늘 영업은 여기까지...',
-      '시간이 생명인데!',
-      '주문이 너무 밀렸어요',
-    ];
+    // ===== 다국어 (한국어 / English) =====
+    const LANG_KEY = 'burger-game-lang';
+    let LANG = 'ko'; // 실제 값은 초기화 때 detectLang()으로 정한다
+
+    const STRINGS = {
+      ko: {
+        logo: 'Burger Game',
+        docTitle: '버거게임 — 순서대로 먹는 경로 퍼즐',
+        docDesc: '버거게임은 설치 없이 바로 즐기는 무료 브라우저 퍼즐 게임입니다. 쓰레기 함정을 피해, 주문서 순서대로 재료를 먹고 버거를 쌓아 올리세요!',
+        langToggle: 'EN',
+        title: {
+          tagline: '주문서 순서대로 재료를 먹어 버거를 완성하세요!',
+          storyMode: '스테이지 모드',
+          storyHint: 'Enter 눌러 시작',
+          endlessMode: '무한 모드',
+          endlessHint: 'Space 눌러 시작',
+          allCleared: '모든 스테이지 클리어!',
+          progress: '스테이지 {n} 진행 중',
+          best: '최고: {r}라운드 · 평균 ★{a}',
+          challenge: '한계에 도전하세요!',
+        },
+        select: {
+          heading: '스테이지 선택',
+          hint: '선택: ← ↑ ↓ → | 시작: Enter | 타이틀로: ESC',
+        },
+        play: {
+          endlessHeader: '무한 모드 — Round {n}',
+          storyHeader: 'Stage {id} — {name}',
+          avg: '평균 ★ {a}',
+          order: '주문서',
+          myBurger: '내 버거',
+          collect: '재료를 모아보세요!',
+          hintEndless: '이동: 방향키 or WASD | 나가기: ESC',
+          hintStory: '이동: 방향키 or WASD | 재시작: R | 스테이지 선택: ESC',
+          round: '라운드 {n}',
+        },
+        clear: {
+          star1: '일단 완성.. 😅',
+          star2: '버거 완성! 🎉',
+          star3: '완벽한 버거 ✨',
+          heartEarned: '완벽 클리어! ♥ +1',
+          nextOrder: '다음 주문 (Enter)',
+          nextStage: '다음 스테이지 (Enter)',
+        },
+        fail: {
+          trap: '영업 실패... 😥',
+          timeout: '시간 초과... ⏰',
+          livesLeft: '목숨 {n}개 남음',
+          continue: '계속하기 (Enter)',
+          reached: '도달 라운드 {n} · 평균 ★ {a}',
+          bestRecord: '(최고 기록 : {n}라운드)',
+        },
+        links: {
+          quitTitle: '타이틀로 나가기 (ESC)',
+          retry: '다시 하기 (R)',
+          stageSelect: '스테이지 선택 (ESC)',
+        },
+        confirm: {
+          restart: '다시 시작할까요?',
+          exitSelect: '스테이지 선택으로 나갈까요?',
+          exitTitle: '타이틀로 나갈까요?',
+          ok: '확인 (Enter)',
+          cancel: '취소 (ESC)',
+        },
+        onboard: {
+          start: '시작! (Enter)',
+          story: [
+            ['🕹️', '*방향키* 또는 *WASD*로 움직여요.'],
+            ['📋', '주문서의 재료들을 *순서대로* 모아요.'],
+            ['🍔', '시간 안에 *먹을 수 있는* 버거를 완성해요!'],
+          ],
+          endless: [
+            ['🗺️', '라운드마다 *랜덤한 맵과 주문*이 계속돼요.'],
+            ['💔', '실패하면 *하트를 잃고*, 모두 사라지면 *게임이 끝나요.*'],
+            ['🍔', '*완벽한 버거*를 만들면 하트가 다시 채워져요.'],
+            ['🔥', '어디까지 갈 수 있을지 *최고 기록*에 도전하세요!'],
+          ],
+        },
+        stageNames: {
+          1: '첫 주문', 2: '함정 주의', 3: '미로 주방', 4: '좁은 통로', 5: '러시아워',
+          6: '대형 매장', 7: '숨바꼭질', 8: '쓰레기 대란', 9: '비밀 통로', 10: '라스트 오더',
+        },
+        failTrap: [
+          '이건... 판매할 수 없어요',
+          '손님이 도망갔어요',
+          '주방장이 울고 있어요',
+          '이 버거, 살아 움직일 것 같아요',
+          '위생 검사관이 오고 있습니다',
+          '냄새가... 심상치 않은데요',
+          '이건 버거가 아니라 사건입니다',
+        ],
+        failTimeout: [
+          '손님이 화내며 나갔어요',
+          '패티가 다 식어버렸어요',
+          '오늘 영업은 여기까지...',
+          '시간이 생명인데!',
+          '주문이 너무 밀렸어요',
+        ],
+        mobile: {
+          title: 'PC에서 즐겨주세요!',
+          body: '이 게임은 키보드로 조작해요.<br>데스크톱이나 노트북에서 방문하면<br>바로 플레이할 수 있어요.',
+          close: '그래도 둘러보기',
+        },
+      },
+
+      en: {
+        logo: 'Burger Game',
+        docTitle: 'Burger Game — Order-Stacking Puzzle',
+        docDesc: 'Burger Game is a free browser puzzle game. Eat ingredients in the right order to stack your burger. Beat the clock, dodge the trash.',
+        langToggle: '한국어',
+        title: {
+          tagline: 'Eat in order, stack up your burger!',
+          storyMode: 'Stage Mode',
+          storyHint: 'Press Enter',
+          endlessMode: 'Endless Mode',
+          endlessHint: 'Press Space',
+          allCleared: 'All stages cleared!',
+          progress: 'Stage {n} in progress',
+          best: 'Best: Round {r} · Avg ★{a}',
+          challenge: 'Push your limits!',
+        },
+        select: {
+          heading: 'Select Stage',
+          hint: 'Move: ← ↑ ↓ → | Start: Enter | Title: ESC',
+        },
+        play: {
+          endlessHeader: 'Endless Mode — Round {n}',
+          storyHeader: 'Stage {id} — {name}',
+          avg: 'Avg ★ {a}',
+          order: 'Order',
+          myBurger: 'My Burger',
+          collect: 'Collect ingredients!',
+          hintEndless: 'Move: Arrows or WASD | Quit: ESC',
+          hintStory: 'Move: Arrows or WASD | Restart: R | Stages: ESC',
+          round: 'Round {n}',
+        },
+        clear: {
+          star1: "Well, it's done.. 😅",
+          star2: 'Burger Complete! 🎉',
+          star3: 'Perfect Burger ✨',
+          heartEarned: 'Perfect clear! ♥ +1',
+          nextOrder: 'Next Order (Enter)',
+          nextStage: 'Next Stage (Enter)',
+        },
+        fail: {
+          trap: 'Service failed... 😥',
+          timeout: "Time's up... ⏰",
+          livesLeft: '{n} lives left',
+          continue: 'Continue (Enter)',
+          reached: 'Reached Round {n} · Avg ★ {a}',
+          bestRecord: '(Best: Round {n})',
+        },
+        links: {
+          quitTitle: 'Quit to Title (ESC)',
+          retry: 'Retry (R)',
+          stageSelect: 'Stage Select (ESC)',
+        },
+        confirm: {
+          restart: 'Restart this stage?',
+          exitSelect: 'Back to stage select?',
+          exitTitle: 'Quit to title?',
+          ok: 'OK (Enter)',
+          cancel: 'Back (ESC)',
+        },
+        onboard: {
+          start: 'Start! (Enter)',
+          story: [
+            ['🕹️', 'Move with the *arrow keys* or *WASD*.'],
+            ['📋', 'Collect ingredients *in order*.'],
+            ['🍔', 'Finish an *edible* burger in time!'],
+          ],
+          endless: [
+            ['🗺️', 'Each round: a *random map and order*.'],
+            ['💔', 'Failing *costs a heart*. Lose all and *the run ends.*'],
+            ['🍔', 'A *perfect burger* restores a heart.'],
+            ['🔥', 'Chase your *best record*!'],
+          ],
+        },
+        stageNames: {
+          1: 'First Order', 2: 'Watch Out', 3: 'Maze Kitchen', 4: 'Tight Squeeze', 5: 'Rush Hour',
+          6: 'Megastore', 7: 'Hide and Seek', 8: 'Trash Chaos', 9: 'Secret Path', 10: 'Last Order',
+        },
+        failTrap: [
+          "We can't serve this...",
+          'The customer bolted',
+          'The chef is crying',
+          'This burger might be alive',
+          'Call the health department',
+          "That smell... isn't right",
+          'This burger is a crime scene',
+        ],
+        failTimeout: [
+          'The customer stormed out',
+          'The patty went cold',
+          "That's it for today...",
+          'Timing is everything!',
+          'The orders piled up',
+        ],
+        mobile: {
+          title: 'Best played on a computer!',
+          body: 'This game is played with a keyboard.<br>Visit on a desktop or laptop<br>to start playing right away.',
+          close: 'Look around anyway',
+        },
+      },
+    };
+
+    // 'a.b.c' 경로로 현재 언어의 값을 조회하고 문자열이면 {placeholder}를 치환한다.
+    // 배열(온보딩 행·실패 코멘트)도 그대로 반환한다.
+    function t(path, params) {
+      let v = STRINGS[LANG];
+      for (const key of path.split('.')) v = v && v[key];
+      if (v === undefined) return path; // 키 오타는 화면에 드러내 개발 중 발견한다
+      if (typeof v === 'string' && params) {
+        return v.replace(/\{(\w+)\}/g, (m, k) => (k in params ? params[k] : m));
+      }
+      return v;
+    }
+
+    // 판 이름: 스토리는 사전의 스테이지 이름, 무한은 '라운드 N'
+    function stageTitle(data) {
+      return data.endless ? t('play.round', { n: data.id }) : t('stageNames.' + data.id);
+    }
 
     // ===== 스테이지 데이터 =====
     // 모든 스테이지는 함정을 하나도 밟지 않고 주문 순서대로 먹는 경로가 존재하도록 설계
@@ -229,7 +434,6 @@
       {
         // 재료 2, 함정 0 — 조작·규칙 학습 (외길 스네이크)
         id: 1,
-        name: '첫 주문',
         timeLimit: 15,
         recipe: ['patty', 'cheese'],
         grid: [
@@ -247,7 +451,6 @@
       {
         // 재료 3, 함정 2 — 회피 개념 도입 (함정이 지름길을 지킨다)
         id: 2,
-        name: '함정 주의',
         timeLimit: 15,
         recipe: ['patty', 'cheese', 'lettuce'],
         grid: [
@@ -265,7 +468,6 @@
       {
         // 재료 4, 함정 4, 벽 등장 — 경로 계획 필요
         id: 3,
-        name: '미로 주방',
         timeLimit: 15,
         recipe: ['patty', 'lettuce', 'cheese', 'tomato'],
         grid: [
@@ -283,7 +485,6 @@
       {
         // 재료 5, 함정 6, 좁은 통로 — 순서 최적화
         id: 4,
-        name: '좁은 통로',
         timeLimit: 15,
         recipe: ['patty', 'onion', 'lettuce', 'cheese', 'tomato'],
         grid: [
@@ -301,7 +502,6 @@
       {
         // 재료 7, 함정 8, 시간 빠듯 — 종합 난이도
         id: 5,
-        name: '러시아워',
         timeLimit: 15,
         recipe: ['tomato', 'patty', 'onion', 'lettuce', 'bacon', 'cheese', 'egg'],
         grid: [
@@ -319,7 +519,6 @@
       {
         // 재료 5, 함정 5, 11×11 — 넓은 맵 적응 (재료 분산, 함정이 지름길을 지킴)
         id: 6,
-        name: '대형 매장',
         timeLimit: 15,
         recipe: ['patty', 'onion', 'tomato', 'cheese', 'lettuce'],
         grid: [
@@ -339,7 +538,6 @@
       {
         // 재료 6, 함정 5, 11×11 — 재료를 맵 전역에 흩뿌려 사용 구역 확대
         id: 7,
-        name: '숨바꼭질',
         timeLimit: 15,
         recipe: ['patty', 'lettuce', 'cheese', 'tomato', 'onion', 'bacon'],
         grid: [
@@ -359,7 +557,6 @@
       {
         // 재료 6, 함정 7, 11×11 — 함정 고밀도, 안전 경로가 좁다
         id: 8,
-        name: '쓰레기 대란',
         timeLimit: 15,
         recipe: ['tomato', 'cheese', 'patty', 'lettuce', 'onion', 'pickle'],
         grid: [
@@ -379,7 +576,6 @@
       {
         // 재료 7, 함정 7, 11×11 — 재료가 곳곳에 숨어 경로 계획 필요
         id: 9,
-        name: '비밀 통로',
         timeLimit: 15,
         recipe: ['patty', 'onion', 'lettuce', 'cheese', 'tomato', 'bacon', 'egg'],
         grid: [
@@ -399,7 +595,6 @@
       {
         // 재료 8(전 재료), 함정 8, 13×13 최대 맵 — 최종 스테이지, 시간 빠듯
         id: 10,
-        name: '라스트 오더',
         timeLimit: 15,
         recipe: ['patty', 'cheese', 'lettuce', 'tomato', 'onion', 'bacon', 'egg', 'pickle'],
         grid: [
@@ -738,11 +933,11 @@
       for (const data of STAGES) {
         const problems = checkStageData(data);
         if (problems.length) {
-          console.warn(`[stage ${data.id} "${data.name}"] 데이터 오류`, problems);
+          console.warn(`[stage ${data.id} "${stageTitle(data)}"] 데이터 오류`, problems);
         }
         const v = validateStage(data);
         if (!v.reachable || !v.perfectPath || !v.timeOk) {
-          console.warn(`[stage ${data.id} "${data.name}"] 검증 경고`, v);
+          console.warn(`[stage ${data.id} "${stageTitle(data)}"] 검증 경고`, v);
         }
       }
     }
@@ -960,11 +1155,11 @@
         if (!best || built.revisits < best.revisits) best = built;
       }
       if (best) {
-        return { id: round, name: `라운드 ${round}`, timeLimit: ENDLESS.time(round), recipe: best.recipe, grid: best.grid };
+        return { id: round, endless: true, timeLimit: ENDLESS.time(round), recipe: best.recipe, grid: best.grid };
       }
       // 극히 드문 생성 실패 대비: 안전한 최소 맵
       return {
-        id: round, name: `라운드 ${round}`, timeLimit: ENDLESS.time(round),
+        id: round, endless: true, timeLimit: ENDLESS.time(round),
         recipe: ['patty', 'cheese'],
         grid: ['#########', '#S......#', '#.......#', '#...P...#', '#.......#', '#...C...#', '#.......#', '#.......#', '#########'],
       };
@@ -1020,6 +1215,40 @@
       const save = loadSave();
       save[stageId] = Math.max(save[stageId] || 0, earned);
       storageSet(SAVE_KEY, JSON.stringify(save));
+    }
+
+    // ===== 언어 적용 =====
+    // 저장된 선택이 있으면 그것을, 없으면 브라우저 언어로 결정
+    function detectLang() {
+      const saved = storageGet(LANG_KEY);
+      if (saved === 'ko' || saved === 'en') return saved;
+      return (navigator.language || '').toLowerCase().startsWith('ko') ? 'ko' : 'en';
+    }
+
+    // 캔버스는 매 프레임 다시 그려지므로 자동 반영된다.
+    // DOM(모바일 안내·문서 메타)은 여기서 직접 갱신한다.
+    function applyLanguage() {
+      document.documentElement.lang = LANG;
+      document.title = t('docTitle');
+      const desc = document.querySelector('meta[name="description"]');
+      if (desc) desc.setAttribute('content', t('docDesc'));
+      const set = (id, prop, val) => {
+        const el = document.getElementById(id);
+        if (el) el[prop] = val;
+      };
+      set('mobileNoticeTitle', 'textContent', t('mobile.title'));
+      set('mobileNoticeBody', 'innerHTML', t('mobile.body'));
+      set('mobileNoticeClose', 'textContent', t('mobile.close'));
+    }
+
+    function setLang(lang) {
+      LANG = lang;
+      storageSet(LANG_KEY, lang);
+      applyLanguage();
+    }
+
+    function toggleLang() {
+      setLang(LANG === 'ko' ? 'en' : 'ko');
     }
 
     // 무한 모드 최고 기록 조회/저장 (최고 라운드 + 그 런의 평균 별점)
@@ -1526,7 +1755,7 @@
       failed = true;
       failedReason = reason;
       failedAt = performance.now();
-      const pool = reason === 'trap' ? FAIL_COMMENTS_TRAP : FAIL_COMMENTS_TIMEOUT;
+      const pool = t(reason === 'trap' ? 'failTrap' : 'failTimeout');
       failComment = pool[Math.floor(Math.random() * pool.length)];
       heldDirs = [];
       if (mode === 'endless') endlessLives = Math.max(0, endlessLives - 1);
@@ -1563,6 +1792,36 @@
       if (screen === 'title') renderTitle();
       else if (screen === 'select') renderSelect();
       else renderPlay();
+      drawLangToggle(); // 맨 마지막에 그려 팝업 위에서도 누를 수 있게
+    }
+
+    // 우상단 언어 토글. 순수 플레이 중에는 숨겨 실수 클릭을 막고,
+    // 타이틀·선택 화면과 팝업이 떠 있을 때는 노출한다 (isBlockingOverlay 재사용).
+    function drawLangToggle() {
+      if (screen === 'play' && !isBlockingOverlay()) return;
+
+      const w = 62;
+      const h = 28;
+      const x = CANVAS_W - 26 - w;
+      const y = 16;
+      const hovered = lastMouse.x >= x && lastMouse.x <= x + w
+        && lastMouse.y >= y && lastMouse.y <= y + h;
+
+      ctx.fillStyle = hovered ? COLORS.accentSoft : COLORS.panel;
+      ctx.strokeStyle = hovered ? COLORS.accent : COLORS.panelBorder;
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.roundRect(x, y, w, h, h / 2);
+      ctx.fill();
+      ctx.stroke();
+
+      ctx.fillStyle = hovered ? COLORS.text : COLORS.textSub;
+      ctx.font = uiFont(FONT.small, 'bold');
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(t('langToggle'), x + w / 2, y + h / 2 + 1);
+
+      hitAreas.push({ x, y, w, h, action: toggleLang });
     }
 
     const THEME_STAGE = {
@@ -1604,7 +1863,7 @@
       ctx.shadowOffsetY = 4;
       ctx.fillStyle = COLORS.text;
       ctx.font = uiFont(FONT.hero, 'bold');
-      ctx.fillText('Burger Game v2', CANVAS_W / 2, cy - 15);
+      ctx.fillText(t('logo'), CANVAS_W / 2, cy - 15);
 
       // 그림자 초기화
       ctx.shadowColor = 'transparent';
@@ -1613,7 +1872,7 @@
 
       ctx.font = uiFont(FONT.bodySm);
       ctx.fillStyle = COLORS.textSub;
-      ctx.fillText('주문서 순서대로 재료를 먹어 버거를 완성하세요!', CANVAS_W / 2, cy + 34);
+      ctx.fillText(t('title.tagline'), CANVAS_W / 2, cy + 34);
 
       // --- 좌우 나란히 배치되는 모드 선택 버튼 ---
       const btnW = 200;
@@ -1625,7 +1884,7 @@
       const btnY = cy + 90;
 
       // 1. 스테이지 모드
-      drawModeButton(leftX, btnY, btnW, btnH, '스테이지 모드', 'Enter 눌러 시작', THEME_STAGE, () => {
+      drawModeButton(leftX, btnY, btnW, btnH, t('title.storyMode'), t('title.storyHint'), THEME_STAGE, () => {
         screen = 'select';
       });
 
@@ -1635,8 +1894,8 @@
         if (save[STAGES[i].id] > 0) clearedCount++;
       }
       const stageRecord = clearedCount >= STAGES.length 
-        ? '모든 스테이지 클리어!' 
-        : `스테이지 ${clearedCount + 1} 진행 중`;
+        ? t('title.allCleared') 
+        : t('title.progress', { n: clearedCount + 1 });
 
       ctx.font = uiFont(FONT.caption);
       ctx.fillStyle = COLORS.textSub;
@@ -1644,14 +1903,14 @@
       ctx.fillText(stageRecord, leftX + btnW / 2, btnY + btnH + 28);
 
       // 2. 무한 모드
-      drawModeButton(rightX, btnY, btnW, btnH, '무한 모드', 'Space 눌러 시작', THEME_ENDLESS, () => {
+      drawModeButton(rightX, btnY, btnW, btnH, t('title.endlessMode'), t('title.endlessHint'), THEME_ENDLESS, () => {
         startEndless();
       });
 
       const rec = loadEndlessRecord();
       const endlessRecord = rec.bestRound > 0 
-        ? `최고: ${rec.bestRound}라운드 · 평균 ★${rec.bestAvg.toFixed(1)}`
-        : '한계에 도전하세요!';
+        ? t('title.best', { r: rec.bestRound, a: rec.bestAvg.toFixed(1) })
+        : t('title.challenge');
 
       ctx.font = uiFont(FONT.caption);
       ctx.fillStyle = COLORS.textSub;
@@ -1714,7 +1973,7 @@
       ctx.textBaseline = 'middle';
       ctx.fillStyle = COLORS.text;
       ctx.font = uiFont(FONT.h2, 'bold');
-      ctx.fillText('스테이지 선택', CANVAS_W / 2, titleY);
+      ctx.fillText(t('select.heading'), CANVAS_W / 2, titleY);
 
       ctx.shadowColor = 'transparent';
       ctx.shadowBlur = 0;
@@ -1792,7 +2051,7 @@
 
           ctx.fillStyle = COLORS.text;
           ctx.font = uiFont(FONT.body); // 제목 크기 키움
-          ctx.fillText(data.name, x + cardW / 2, cardY + 92); // 전체적으로 위로 올림
+          ctx.fillText(stageTitle(data), x + cardW / 2, cardY + 92); // 전체적으로 위로 올림
 
           const earned = save[data.id] || 0;
           ctx.font = '24px serif'; // 별 크기 키움
@@ -1815,7 +2074,7 @@
 
       ctx.font = uiFont(FONT.caption);
       ctx.fillStyle = COLORS.textSub;
-      ctx.fillText('선택: ← ↑ ↓ → | 시작: Enter | 타이틀로: ESC', CANVAS_W / 2, CANVAS_H - 40);
+      ctx.fillText(t('select.hint'), CANVAS_W / 2, CANVAS_H - 40);
     }
 
     // 플레이 화면
@@ -1827,7 +2086,9 @@
       ctx.fillStyle = COLORS.textSub;
       ctx.textAlign = 'center';
       ctx.textBaseline = 'top';
-      const header = mode === 'endless' ? `무한 모드 — Round ${endlessRound}` : `Stage ${stage.id} — ${stage.name}`;
+      const header = mode === 'endless'
+        ? t('play.endlessHeader', { n: endlessRound })
+        : t('play.storyHeader', { id: stage.id, name: stageTitle(stage) });
       ctx.fillText(header, CANVAS_W / 2, 40);
 
       // 무한 모드 목숨 HUD (좌상단 하트) + 우상단 평균 별점
@@ -1854,7 +2115,7 @@
         ctx.font = uiFont(FONT.body, 'bold');
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
-        ctx.fillText(`평균 ★ ${currentAvg}`, rightHudX, hudY);
+        ctx.fillText(t('play.avg', { a: currentAvg }), rightHudX, hudY);
       }
 
       renderTimeBar();
@@ -1947,9 +2208,7 @@
       ctx.fillStyle = COLORS.textSub;
       ctx.textAlign = 'center';
       ctx.textBaseline = 'top';
-      const playHint = mode === 'endless'
-        ? '이동: 방향키 or WASD | 나가기: ESC'
-        : '이동: 방향키 or WASD | 재시작: R | 스테이지 선택: ESC';
+      const playHint = t(mode === 'endless' ? 'play.hintEndless' : 'play.hintStory');
       ctx.fillText(playHint, CANVAS_W / 2, CANVAS_H - 40);
 
       // 결과 팝업 (각각 번 착지 / 하트 깨짐 연출이 끝난 뒤 표시)
@@ -2005,7 +2264,7 @@
       // 다음에 먹을 재료 = 주문서에서 아직 안 먹은 첫 재료
       const nextName = stage.recipe.find((name) => !names.includes(name));
 
-      drawPanelHeader(SIDE_L_X, '주문서');
+      drawPanelHeader(SIDE_L_X, t('play.order'));
 
       for (let i = 0; i < stage.recipe.length; i++) {
         const name = stage.recipe[i];
@@ -2067,7 +2326,7 @@
       ctx.textBaseline = 'middle';
       ctx.fillStyle = COLORS.text;
       ctx.font = uiFont(FONT.h2, 'bold');
-      ctx.fillText(failedReason === 'trap' ? '영업 실패... 😥' : '시간 초과... ⏰', cardCx, cardCy - 80);
+      ctx.fillText(t(failedReason === 'trap' ? 'fail.trap' : 'fail.timeout'), cardCx, cardCy - 80);
 
       if (mode === 'endless') {
         if (endlessLives > 0) {
@@ -2078,10 +2337,10 @@
           
           ctx.font = uiFont(FONT.bodySm);
           ctx.fillStyle = COLORS.textSub;
-          ctx.fillText(`목숨 ${endlessLives}개 남음`, cardCx, cardCy + 5);
+          ctx.fillText(t('fail.livesLeft', { n: endlessLives }), cardCx, cardCy + 5);
           
-          drawButton(cardCx - 110, cardCy + 35, 220, 44, '계속하기 (Enter)', () => restartStage());
-          drawTextLink(cardCx, cardCy + 105, '타이틀로 나가기 (ESC)', exitPlay);
+          drawButton(cardCx - 110, cardCy + 35, 220, 44, t('fail.continue'), () => restartStage());
+          drawTextLink(cardCx, cardCy + 105, t('links.quitTitle'), exitPlay);
         } else {
           // 목숨 소진: 런 종료 — 전면 개선된 디자인 (한 줄로 표시)
           const thisAvg = endlessClears > 0 ? (endlessStarSum / endlessClears).toFixed(1) : '-';
@@ -2089,12 +2348,12 @@
           
           ctx.font = uiFont(FONT.bodySm); // 볼드 빼고 폰트 줄임
           ctx.fillStyle = COLORS.text;
-          ctx.fillText(`도달 라운드 ${endlessRound} · 평균 ★ ${thisAvg}`, cardCx, cardCy - 20);
+          ctx.fillText(t('fail.reached', { n: endlessRound, a: thisAvg }), cardCx, cardCy - 20);
 
           ctx.fillStyle = COLORS.textSub;
-          ctx.fillText(`(최고 기록 : ${rec.bestRound}라운드)`, cardCx, cardCy + 5);
+          ctx.fillText(t('fail.bestRecord', { n: rec.bestRound }), cardCx, cardCy + 5);
           
-          drawButton(cardCx - 110, cardCy + 40, 220, 44, '타이틀로 나가기 (ESC)', exitPlay);
+          drawButton(cardCx - 110, cardCy + 40, 220, 44, t('links.quitTitle'), exitPlay);
         }
       } else {
         ctx.font = uiFont(FONT.bodySm);
@@ -2112,7 +2371,7 @@
       const now = performance.now();
       const s = STACK_LAYER_W / 120;
 
-      drawPanelHeader(SIDE_R_X, '내 버거');
+      drawPanelHeader(SIDE_R_X, t('play.myBurger'));
 
       // 아래 번 (시작 상태)
       drawImg(IMG.bunBottom, panelCx, baseY, s);
@@ -2121,7 +2380,7 @@
       if (stack.length === 0 && !completed) {
         ctx.font = uiFont(FONT.small);
         ctx.fillStyle = COLORS.textSub;
-        ctx.fillText('재료를 모아보세요!', panelCx, baseY - 50);
+        ctx.fillText(t('play.collect'), panelCx, baseY - 50);
       }
 
       // 먹은 순서대로 위로 쌓기
@@ -2241,9 +2500,9 @@
       const titleY = cardCy + (isEndless ? -75 : (showNext ? -105 : -90));
       const starsY = cardCy + (isEndless ? -25 : (showNext ? -50 : -30));
 
-      let titleText = '버거 완성! 🎉';
-      if (stars === 1) titleText = '일단 완성.. 😅';
-      else if (stars === 3) titleText = '완벽한 버거 ✨';
+      let titleText = t('clear.star2');
+      if (stars === 1) titleText = t('clear.star1');
+      else if (stars === 3) titleText = t('clear.star3');
 
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
@@ -2266,11 +2525,11 @@
         if (isEndless && endlessHeartEarned) {
           ctx.font = uiFont(FONT.bodySm, 'bold');
           ctx.fillStyle = COLORS.timerRed;
-          ctx.fillText('완벽 클리어! ♥ +1', cardCx, cardCy + 5);
+          ctx.fillText(t('clear.heartEarned'), cardCx, cardCy + 5);
         }
         // 무한 모드 클리어 팝업의 두 버튼을 조금 더 위로 올림
         const btnY = isEndless ? cardCy + 25 : cardCy;
-        drawButton(cardCx - 110, btnY, 220, 44, isEndless ? '다음 주문 (Enter)' : '다음 스테이지 (Enter)', () => goNext());
+        drawButton(cardCx - 110, btnY, 220, 44, t(isEndless ? 'clear.nextOrder' : 'clear.nextStage'), () => goNext());
         renderResultTextLinks(cardCx, btnY + (isEndless ? 70 : 80));
       } else {
         renderResultTextLinks(cardCx, cardCy + 60);
@@ -2307,10 +2566,10 @@
     function renderResultTextLinks(x, y) {
       if (mode === 'endless') {
         // 성공(완료) 화면이거나, 무한 모드 완전 실패(목숨 0)일 때는 재시도 버튼 없음
-        drawTextLink(x, y, '타이틀로 나가기 (ESC)', exitPlay);
+        drawTextLink(x, y, t('links.quitTitle'), exitPlay);
       } else {
-        drawTextLink(x, y, '다시 하기 (R)', () => restartStage());
-        drawTextLink(x, y + 36, '스테이지 선택 (ESC)', exitToSelect);
+        drawTextLink(x, y, t('links.retry'), () => restartStage());
+        drawTextLink(x, y + 36, t('links.stageSelect'), exitToSelect);
       }
     }
 
@@ -2332,8 +2591,8 @@
       ctx.font = uiFont(FONT.h3, 'bold');
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
-      const exitMsg = mode === 'endless' ? '타이틀로 나갈까요?' : '스테이지 선택으로 나갈까요?';
-      const msg = confirming === 'restart' ? '다시 시작할까요?' : exitMsg;
+      const exitMsg = mode === 'endless' ? t('confirm.exitTitle') : t('confirm.exitSelect');
+      const msg = confirming === 'restart' ? t('confirm.restart') : exitMsg;
       ctx.fillText(msg, cardCx, cardCy - 30);
 
       const btnW = 130;
@@ -2344,7 +2603,7 @@
       const btnY = cardCy + 20;
 
       // Primary Action (알약 버튼)
-      drawButton(leftX, btnY, btnW, btnH, '확인 (Enter)', () => {
+      drawButton(leftX, btnY, btnW, btnH, t('confirm.ok'), () => {
         const action = confirming;
         confirming = null;
         if (action === 'restart') restartStage();
@@ -2352,29 +2611,15 @@
       });
       
       // Secondary Action (회색 알약 버튼)
-      drawButton(rightX, btnY, btnW, btnH, '취소 (ESC)', () => {
+      drawButton(rightX, btnY, btnW, btnH, t('confirm.cancel'), () => {
         confirming = null;
       }, 'secondary');
     }
 
-    // 온보딩 팝업 내용
-    const ONBOARD_ROWS_STORY = [
-      ['🕹️', '*방향키* 또는 *WASD*로 움직여요.'],
-      ['📋', '주문서의 재료들을 *순서대로* 모아요.'],
-      ['🍔', '시간 안에 *먹을 수 있는* 버거를 완성해요!'],
-    ];
-
-    const ONBOARD_ROWS_ENDLESS = [
-      ['🗺️', '라운드마다 *랜덤한 맵과 주문*이 계속돼요.'],
-      ['💔', '실패하면 *하트를 잃고*, 모두 사라지면 *게임이 끝나요.*'],
-      ['🍔', '*완벽한 버거*를 만들면 하트가 다시 채워져요.'],
-      ['🔥', '어디까지 갈 수 있을지 *최고 기록*에 도전하세요!'],
-    ];
-
     function renderOnboardingPopup() {
       overlayFull();
       const isEndless = (onboarding === 'endless');
-      const rows = isEndless ? ONBOARD_ROWS_ENDLESS : ONBOARD_ROWS_STORY;
+      const rows = t(isEndless ? 'onboard.endless' : 'onboard.story');
       
       const iconSize = 30;
       const fontSize = FONT.bodyLg;
@@ -2435,7 +2680,7 @@
       const btnW = UI.btnW;
       const btnH = UI.btnH;
       const marginBot = 36;
-      drawButton(cardCx - btnW / 2, cy + ch - (btnH + marginBot), btnW, btnH, '시작! (Enter)', () => dismissOnboarding());
+      drawButton(cardCx - btnW / 2, cy + ch - (btnH + marginBot), btnW, btnH, t('onboard.start'), () => dismissOnboarding());
     }
 
     let lastTime = performance.now();
@@ -2448,6 +2693,8 @@
       updateCursor();
     }
 
+    LANG = detectLang();
+    applyLanguage();
     verifyStages();
     requestAnimationFrame(frame);
   </script>
