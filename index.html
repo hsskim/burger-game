@@ -214,7 +214,6 @@
         logo: 'Burger Game',
         docTitle: '버거게임 — 순서대로 먹는 경로 퍼즐',
         docDesc: '버거게임은 설치 없이 바로 즐기는 무료 브라우저 퍼즐 게임입니다. 쓰레기 함정을 피해, 주문서 순서대로 재료를 먹고 버거를 쌓아 올리세요!',
-        langToggle: 'EN',
         title: {
           tagline: '주문서 순서대로 재료를 먹어 버거를 완성하세요!',
           storyMode: '스테이지 모드',
@@ -315,7 +314,6 @@
         logo: 'Burger Game',
         docTitle: 'Burger Game — Order-Stacking Puzzle',
         docDesc: 'Burger Game is a free browser puzzle game. Eat ingredients in the right order to stack your burger. Beat the clock, dodge the trash.',
-        langToggle: '한국어',
         title: {
           tagline: 'Eat in order, stack up your burger!',
           storyMode: 'Stage Mode',
@@ -1249,10 +1247,6 @@
       applyLanguage();
     }
 
-    function toggleLang() {
-      setLang(LANG === 'ko' ? 'en' : 'ko');
-    }
-
     // 무한 모드 최고 기록 조회/저장 (최고 라운드 + 그 런의 평균 별점)
     function loadEndlessRecord() {
       try {
@@ -1797,35 +1791,59 @@
       drawLangToggle(); // 맨 마지막에 그려 팝업 위에서도 누를 수 있게
     }
 
-    // 우상단 언어 토글. 플레이 화면에서는 순수 플레이 중과 일시정지(확인 팝업) 때 숨긴다 —
-    // 실수 클릭을 막고, 예/아니오만 물어보는 팝업에 군더더기를 얹지 않기 위해서다.
-    // 타이틀·선택 화면과 온보딩·클리어·실패 팝업에서는 노출한다.
+    // 우상단 언어 선택. 두 언어를 나란히 두고 현재 언어를 강조하며, 각 절반을 눌러
+    // 그 언어를 직접 고른다 — '누르면 무엇으로 바뀌는지' 헷갈릴 여지를 없앤다.
+    // 플레이 화면에서는 순수 플레이 중과 일시정지(확인 팝업) 때 숨긴다.
+    const LANG_OPTIONS = [['ko', '한국어'], ['en', 'EN']];
+
     function drawLangToggle() {
       if (screen === 'play' && (confirming || !isBlockingOverlay())) return;
 
-      const w = 62;
       const h = 28;
+      const padX = 12;   // 알약 좌우 안여백
+      const gap = 10;    // 두 언어 사이 간격 (구분선 자리)
       const margin = 26; // 상·우 여백을 같게
+
+      ctx.font = uiFont(FONT.small, 'bold');
+      const widths = LANG_OPTIONS.map(([, label]) => ctx.measureText(label).width);
+      const w = padX * 2 + widths[0] + gap + widths[1];
       const x = CANVAS_W - margin - w;
       const y = margin;
-      const hovered = lastMouse.x >= x && lastMouse.x <= x + w
-        && lastMouse.y >= y && lastMouse.y <= y + h;
 
-      ctx.fillStyle = hovered ? COLORS.accentSoft : COLORS.panel;
-      ctx.strokeStyle = hovered ? COLORS.accent : COLORS.panelBorder;
+      ctx.fillStyle = COLORS.panel;
+      ctx.strokeStyle = COLORS.panelBorder;
       ctx.lineWidth = 1.5;
       ctx.beginPath();
       ctx.roundRect(x, y, w, h, h / 2);
       ctx.fill();
       ctx.stroke();
 
-      ctx.fillStyle = hovered ? COLORS.text : COLORS.textSub;
-      ctx.font = uiFont(FONT.small, 'bold');
-      ctx.textAlign = 'center';
+      // 현재 언어는 진하게, 나머지는 흐리게(호버 시 강조)
+      ctx.textAlign = 'left';
       ctx.textBaseline = 'middle';
-      ctx.fillText(t('langToggle'), x + w / 2, y + h / 2 + 1);
+      let cx = x + padX;
+      LANG_OPTIONS.forEach(([code, label], i) => {
+        const lw = widths[i];
+        const active = LANG === code;
+        const hovered = !active && lastMouse.x >= cx - gap / 2 && lastMouse.x <= cx + lw + gap / 2
+          && lastMouse.y >= y && lastMouse.y <= y + h;
 
-      hitAreas.push({ x, y, w, h, action: toggleLang });
+        ctx.fillStyle = active ? COLORS.text : (hovered ? COLORS.accent : COLORS.starEmpty);
+        ctx.fillText(label, cx, y + h / 2 + 1);
+
+        if (!active) hitAreas.push({ x: cx - gap / 2, y, w: lw + gap, h, action: () => setLang(code) });
+        cx += lw;
+
+        if (i === 0) { // 두 언어 사이 구분선
+          ctx.strokeStyle = COLORS.panelBorder;
+          ctx.lineWidth = 1;
+          ctx.beginPath();
+          ctx.moveTo(cx + gap / 2, y + 8);
+          ctx.lineTo(cx + gap / 2, y + h - 8);
+          ctx.stroke();
+          cx += gap;
+        }
+      });
     }
 
     const THEME_STAGE = {
