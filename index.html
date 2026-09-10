@@ -253,6 +253,7 @@
           trap: '영업 실패... 😥',
           timeout: '시간 초과... ⏰',
           livesLeft: '목숨 {n}개 남음',
+          lifeLeft: '목숨 {n}개 남음', // 한국어는 단복수 구분이 없어 동일
           continue: '계속하기 (Enter)',
           reached: '도달 라운드 {n} · 평균 ★ {a}',
           bestRecord: '(최고 기록 : {n}라운드)',
@@ -342,7 +343,7 @@
           round: 'Round {n}',
         },
         clear: {
-          star1: "Well, it's done.. 😅",
+          star1: "Well, it's done... 😅",
           star2: 'Burger Complete! 🎉',
           star3: 'Perfect Burger ✨',
           heartEarned: 'Perfect clear! ♥ +1',
@@ -353,6 +354,7 @@
           trap: 'Service failed... 😥',
           timeout: "Time's up... ⏰",
           livesLeft: '{n} lives left',
+          lifeLeft: '{n} life left', // 영어는 1일 때 단수형이 필요하다
           continue: 'Continue (Enter)',
           reached: 'Reached Round {n} · Avg ★ {a}',
           bestRecord: '(Best: Round {n})',
@@ -366,8 +368,8 @@
           restart: 'Restart this stage?',
           exitSelect: 'Back to stage select?',
           exitTitle: 'Quit to title?',
-          ok: 'OK (Enter)',
-          cancel: 'Back (ESC)',
+          ok: 'Yes (Enter)',
+          cancel: 'No (ESC)',
         },
         onboard: {
           start: 'Start! (Enter)',
@@ -1795,15 +1797,17 @@
       drawLangToggle(); // 맨 마지막에 그려 팝업 위에서도 누를 수 있게
     }
 
-    // 우상단 언어 토글. 순수 플레이 중에는 숨겨 실수 클릭을 막고,
-    // 타이틀·선택 화면과 팝업이 떠 있을 때는 노출한다 (isBlockingOverlay 재사용).
+    // 우상단 언어 토글. 플레이 화면에서는 순수 플레이 중과 일시정지(확인 팝업) 때 숨긴다 —
+    // 실수 클릭을 막고, 예/아니오만 물어보는 팝업에 군더더기를 얹지 않기 위해서다.
+    // 타이틀·선택 화면과 온보딩·클리어·실패 팝업에서는 노출한다.
     function drawLangToggle() {
-      if (screen === 'play' && !isBlockingOverlay()) return;
+      if (screen === 'play' && (confirming || !isBlockingOverlay())) return;
 
       const w = 62;
       const h = 28;
-      const x = CANVAS_W - 26 - w;
-      const y = 16;
+      const margin = 26; // 상·우 여백을 같게
+      const x = CANVAS_W - margin - w;
+      const y = margin;
       const hovered = lastMouse.x >= x && lastMouse.x <= x + w
         && lastMouse.y >= y && lastMouse.y <= y + h;
 
@@ -2337,7 +2341,7 @@
           
           ctx.font = uiFont(FONT.bodySm);
           ctx.fillStyle = COLORS.textSub;
-          ctx.fillText(t('fail.livesLeft', { n: endlessLives }), cardCx, cardCy + 5);
+          ctx.fillText(t(endlessLives === 1 ? 'fail.lifeLeft' : 'fail.livesLeft', { n: endlessLives }), cardCx, cardCy + 5);
           
           drawButton(cardCx - 110, cardCy + 35, 220, 44, t('fail.continue'), () => restartStage());
           drawTextLink(cardCx, cardCy + 105, t('links.quitTitle'), exitPlay);
