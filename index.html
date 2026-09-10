@@ -1346,10 +1346,12 @@
       selectedIndex = currentStageIndex;
       heldDirs = [];
       confirming = null;
+      lastMouse = { x: -1, y: -1 };
     }
 
     // 플레이/결과에서 나가기: 스토리는 선택 화면, 무한은 타이틀로
     function exitPlay() {
+      lastMouse = { x: -1, y: -1 };
       if (mode === 'endless') {
         screen = 'title';
         heldDirs = [];
@@ -1392,6 +1394,7 @@
       screen = 'play';
       heldDirs = [];
       confirming = null;
+      lastMouse = { x: -1, y: -1 };
       maybeOnboard('story', STAGES[i].id === 1);
     }
 
@@ -1406,6 +1409,7 @@
       screen = 'play';
       heldDirs = [];
       confirming = null;
+      lastMouse = { x: -1, y: -1 };
       maybeOnboard('endless', true);
     }
 
@@ -1437,6 +1441,7 @@
       if (screen === 'title') {
         if (e.code === 'Enter') {
           e.preventDefault();
+          lastMouse = { x: -1, y: -1 };
           screen = 'select';
         } else if (e.code === 'Space') {
           e.preventDefault();
@@ -1459,6 +1464,7 @@
         } else if (e.code === 'Enter' || e.code === 'Space') {
           if (isUnlocked(selectedIndex)) startStory(selectedIndex);
         } else if (e.code === 'Escape') {
+          lastMouse = { x: -1, y: -1 };
           screen = 'title';
         }
         return;
@@ -1968,6 +1974,7 @@
 
       // 1. 스테이지 모드
       drawModeButton(leftX, btnY, btnW, btnH, t('title.storyMode'), t('title.storyHint'), THEME_STAGE, () => {
+        lastMouse = { x: -1, y: -1 };
         screen = 'select';
       });
 
@@ -2091,10 +2098,7 @@
         const x = gridX0 + col * (cardW + gapX);
         const cardTop = gridY0 + row * (cardH + gapY);
 
-        const hovered = lastMouse.x >= x && lastMouse.x <= x + cardW &&
-          lastMouse.y >= cardTop && lastMouse.y <= cardTop + cardH;
-
-        const isHighlighted = (hovered || selected) && unlocked;
+        const isHighlighted = selected && unlocked;
         const floatY = isHighlighted ? Math.sin(performance.now() / 300) * 6 - 8 : 0;
         const cardY = cardTop + floatY;
 
