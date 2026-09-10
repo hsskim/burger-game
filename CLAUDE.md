@@ -38,6 +38,9 @@ open index.html
 - **솔버**: `validateStage`/`bfsDist` — 스테이지 검증. 무한 모드 생성기도 이걸 재사용
 - **무한 생성기**: `generateStage`/`buildEndlessMap` — 미로 생성 + 재료 분산 + 지름길 함정 + 솔버 검증 (문자 격자용 BFS `bfsPathChar`는 검증용 `bfsDist`와 별개)
 - **상태**: 현재 화면, `mode`(story/endless), 캐릭터 위치, 먹은 스택, 남은 시간, 목숨, 진행 저장(localStorage)
+  - localStorage는 반드시 `storageGet`/`storageSet` 래퍼로만 접근한다. 비공개 모드·사이트 데이터 차단
+    환경에서는 `localStorage` 접근 자체가 예외를 던지는데, 저장 경로가 게임 루프(`update`) 안에 있어
+    직접 호출하면 판을 깨는 순간 게임이 멈춘다. 저장 실패는 조용히 무시하는 것이 정책이다.
 - **게임 루프**: `requestAnimationFrame` 기반 update/render 분리
 - **입력**: 키보드 핸들러 (방향키·WASD 이동, R 재시작[무한 모드는 비활성], ESC 나가기) + 캔버스 클릭(hitAreas)
 - **렌더**: Canvas에 맵·캐릭터·주문서·버거 스택·시간 바·팝업 그리기. 화면별 함수(`renderTitle`/`renderSelect`/`renderPlay` 등)로 분리

@@ -169,7 +169,7 @@
 
 - `LANG` 상태 변수(`'ko' | 'en'`), `burger-game-lang` localStorage 키.
 - 저장된 선택이 없으면 `navigator.language`로 최초 진입 언어를 결정(`ko`로 시작하면 한국어, 그 외 영어). 사용자가 토글하면 즉시 `LANG`을 바꾸고 저장 — 이후 방문에서도 유지.
-- localStorage 접근은 비공개 모드·보안 설정에서 실패할 수 있으므로 읽기/쓰기를 `try/catch`로 감싼다. 저장값은 반드시 `'ko' | 'en'`인지 검증하고, 손상되었거나 없으면 브라우저 감지 결과로 fallback한다.
+- localStorage 접근은 이미 있는 `storageGet`/`storageSet` 래퍼를 그대로 쓴다(비공개 모드·사이트 데이터 차단 환경에서 접근 자체가 예외를 던지는 것을 흡수한다). 저장값은 반드시 `'ko' | 'en'`인지 검증하고, 손상되었거나 없으면 브라우저 감지 결과로 fallback한다.
 
 ### 4-2. 문자열 사전화
 
