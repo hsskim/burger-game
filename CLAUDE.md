@@ -1,4 +1,4 @@
-# CLAUDE.md
+# Burger Game — 개발 가이드
 
 Burger Game 개발을 위한 가이드. 상세 기획은 [prd.md](prd.md) 참조.
 

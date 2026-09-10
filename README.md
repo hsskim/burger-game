@@ -10,6 +10,8 @@ Built as a single HTML file with **no frameworks, no build step, and no image as
 
 > 🖥️ **Keyboard only.** The game is played with the arrow keys or WASD, so it needs a desktop or laptop. Mobile visitors get a friendly notice instead of a broken screen.
 
+![Title screen](screenshots/title.png)
+
 ---
 
 ## 🎮 How to Play
@@ -44,6 +46,8 @@ Eating **3 pieces of trash** ruins the burger and ends the run. There are 8 ingr
 
 **10 handcrafted stages** that open up as you clear them. Your best rating per stage is saved.
 
+![Stage select](screenshots/select.png)
+
 | Stages | Map | Recipe |
 |---|---|---|
 | 1–5 | 9×9 | 2 → 7 ingredients |
@@ -51,6 +55,10 @@ Eating **3 pieces of trash** ruins the burger and ends the run. There are 8 ingr
 | 10 | 13×13 | all 8 ingredients |
 
 Every stage runs on a 15-second timer. The difficulty comes from map size, route length, and how tightly the trash blocks the shortcuts.
+
+![Stage 8 in play](screenshots/play.png)
+
+*The order sheet on the left tracks your progress; eating out of order still finishes the burger, it just costs you the third star.*
 
 ### Endless Mode
 
@@ -67,6 +75,10 @@ Difficulty climbs until round 15, then deliberately flattens out — there are o
 | 1–5 | 9×9 | 2 → 4 | 10s |
 | 6–14 | 11×11 | 5 → 8 | 15s |
 | 15+ | 13×13 | 8 | 20s |
+
+![Endless mode, round 8](screenshots/endless.png)
+
+*Hearts top-left, running average rating top-right.*
 
 ---
 
