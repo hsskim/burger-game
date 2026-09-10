@@ -1048,22 +1048,21 @@
       }
     }
 
-    // 온보딩: 스토리 모드는 1회만, 무한 모드는 매번 표시
+    // 모드별 온보딩 기록 키
+    function onboardKey(kind) {
+      return kind === 'endless' ? ONBOARD_ENDLESS_KEY : ONBOARD_STORY_KEY;
+    }
+
+    // 온보딩: 각 모드 첫 진입 때 1회만 표시
     function maybeOnboard(kind, condition) {
       if (!condition) return;
-      if (kind === 'endless') {
-        onboarding = kind;
-        return;
-      }
-      if (storageGet(ONBOARD_STORY_KEY)) return;
+      if (storageGet(onboardKey(kind))) return;
       onboarding = kind;
     }
 
     function dismissOnboarding() {
       if (!onboarding) return;
-      if (onboarding === 'story') {
-        storageSet(ONBOARD_STORY_KEY, '1');
-      }
+      storageSet(onboardKey(onboarding), '1');
       onboarding = null;
     }
 
@@ -1091,12 +1090,6 @@
       heldDirs = [];
       confirming = null;
       maybeOnboard('endless', true);
-    }
-
-    // 무한 모드 실패 화면에서 진행: 목숨이 남았으면 같은 맵 재도전, 소진됐으면 새 런
-    function endlessAfterFail() {
-      if (endlessLives > 0) restartStage();
-      else startEndless();
     }
 
     // 현재 판을 처음부터 다시 (모드 무관, 같은 맵)
@@ -1180,9 +1173,8 @@
       if (completed || failed) {
         if (mode === 'endless') {
           if (failed) {
-            // 목숨 남으면 Enter로 같은 맵 재개, 소진되면 R로 새 런
-            if (e.code === 'Enter' && endlessLives > 0) endlessAfterFail();
-            else if (e.code === 'KeyR' && endlessLives === 0) endlessAfterFail();
+            // 목숨 남으면 Enter로 같은 맵 재도전. 소진되면 ESC로 나가기만 — 런을 확실히 종료한다
+            if (e.code === 'Enter' && endlessLives > 0) restartStage();
             else if (e.code === 'Escape') exitPlay();
           } else {
             // 클리어: Enter 다음 라운드, ESC 타이틀 (R 재시작 없음 — 목숨 파밍 방지)
@@ -2060,7 +2052,7 @@
           ctx.fillStyle = COLORS.textSub;
           ctx.fillText(`목숨 ${endlessLives}개 남음`, cardCx, cardCy + 5);
           
-          drawButton(cardCx - 110, cardCy + 35, 220, 44, '계속하기 (Enter)', () => endlessAfterFail());
+          drawButton(cardCx - 110, cardCy + 35, 220, 44, '계속하기 (Enter)', () => restartStage());
           drawTextLink(cardCx, cardCy + 105, '타이틀로 나가기 (ESC)', exitPlay);
         } else {
           // 목숨 소진: 런 종료 — 전면 개선된 디자인 (한 줄로 표시)
