@@ -1,11 +1,11 @@
 <!DOCTYPE html>
-<html lang="ko">
+<html lang="en">
 
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <meta name="description" content="Burger Game is a 2D arcade puzzle game where you move a cute two-bun burger character around a grid, eating ingredients in the exact order on your order sheet to build the perfect burger before time runs out — all while dodging trash traps. Built purely with HTML5 Canvas and JavaScript (no frameworks, no image files — SVG only), it runs instantly in any browser.">
-  <title>Burger Game v2</title>
+  <meta name="description" content="Burger Game is a free browser puzzle game. Eat ingredients in the right order to stack your burger. Beat the clock, dodge the trash.">
+  <title>Burger Game — Order-Stacking Puzzle</title>
   <link rel="stylesheet" as="style" crossorigin
     href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
   <style>
@@ -942,6 +942,17 @@
           });
         }
       }
+    }
+
+    // 정적 <head>는 JS를 실행하지 않는 크롤러가 읽는 값이라, 사전의 영어 기본값과
+    // 어긋나면 검색 결과에 옛 문구가 나간다. applyLanguage가 런타임에 덮어쓰는 탓에
+    // 브라우저로는 드러나지 않으므로 개발 중 콘솔로 확인한다.
+    // 반드시 applyLanguage()보다 먼저 호출해야 한다 — 그 뒤에는 정적 값이 남아 있지 않다.
+    function checkStaticHead() {
+      const title = (document.querySelector('title') || {}).textContent;
+      const desc = (document.querySelector('meta[name="description"]') || {}).content;
+      if (title !== STRINGS.en.docTitle) console.warn('[head] 정적 <title>이 STRINGS.en.docTitle과 다르다', { title });
+      if (desc !== STRINGS.en.docDesc) console.warn('[head] 정적 description이 STRINGS.en.docDesc와 다르다', { desc });
     }
 
     function verifyStages() {
@@ -2749,6 +2760,7 @@
       updateCursor();
     }
 
+    checkStaticHead(); // applyLanguage가 덮어쓰기 전에 정적 값을 확인한다
     LANG = detectLang();
     applyLanguage();
     verifyStages();

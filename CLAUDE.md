@@ -20,6 +20,7 @@ Burger Game 개발을 위한 가이드. 상세 기획은 [prd.md](prd.md) 참조
 - **데이터 주도**: 스테이지는 파일 상단 상수 배열의 JSON으로 정의한다. 레벨 추가 = 배열에 항목 추가만으로 가능해야 한다. 게임 로직에 스테이지별 하드코딩 금지. 무한 모드 난이도 곡선도 `ENDLESS` 상수 하나로 조정한다.
 - **다국어(ko/en)**: 화면에 나오는 모든 문자열은 `STRINGS` 사전에 넣고 `t('a.b.c', { n: 1 })`로만 조회한다. 캔버스에 문자열 리터럴을 직접 쓰지 않는다. 스테이지 이름은 `STAGES`가 아니라 `STRINGS[lang].stageNames[id]`에 있고, 판 이름은 `stageTitle(data)`로 얻는다(무한 모드는 `라운드 N` / `Round N`). 재료 이름(`INGREDIENTS[code].name`)은 순서 판정용 내부 식별자라 번역 대상이 아니다. `checkStageData`/`verifyStages`의 콘솔 경고는 개발자용이라 한국어로 둔다.
   - 캔버스는 매 프레임 다시 그려져 언어 전환이 즉시 반영된다. DOM(모바일 안내·`<html lang>`·`<title>`·meta description)은 `applyLanguage()`가 갱신하므로, DOM 문구를 추가하면 이 함수에도 반영한다.
+  - **정적 `<head>`도 함께 관리한다.** `applyLanguage()`가 런타임에 덮어쓰기 때문에 브라우저로는 드러나지 않지만, JS를 실행하지 않는 크롤러는 HTML에 적힌 값을 읽는다. `<html lang>`·`<title>`·description의 정적 값은 사전의 영어 기본값(`STRINGS.en`)과 일치시키고, 시작 시 `checkStaticHead()`가 확인한다(반드시 `applyLanguage()`보다 먼저 호출).
   - 온보딩 아이콘은 **VS16(U+FE0F) 없이 그 자체로 컬러 이모지인 문자만** 쓴다. 변이 선택자가 붙으면 브라우저(특히 WebKit)마다 canvas advance 계산이 달라 아이콘이 좌우로 밀린다. 시작 시 `checkOnboardIcons()`가 콘솔로 경고한다.
   - 언어 선택 UI는 우상단 분절형 알약(`drawLangToggle`)이다. 두 언어를 나란히 두고(`한국어 | English`) 현재 언어를 강조하며, 각 절반이 그 언어를 **직접 선택**한다(누르면 무엇으로 바뀌는지 헷갈리지 않게). 라벨은 각 언어의 고유 이름을 온전히 쓴다 — 약어와 섞으면 층위가 어긋난다. **타이틀·선택 화면에서만 노출**한다(판이 시작된 뒤에는 언어를 바꿀 자리가 아니다). 언어 목록은 `LANG_OPTIONS` 하나만 고치면 늘어난다.
 - **풀이 가능성 보장**: 모든 스테이지와 랜덤 생성 맵은 솔버(`validateStage`, BFS 기반)로 "함정·순서를 지켜 별 3개를 받는 경로가 실제로 존재함"을 검증한다. 새 스테이지를 추가하면 시작 시 `verifyStages()`가 콘솔로 경고한다.
