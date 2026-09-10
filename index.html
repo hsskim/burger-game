@@ -222,7 +222,7 @@
           endlessHint: 'Space 눌러 시작',
           allCleared: '모든 스테이지 클리어!',
           progress: '스테이지 {n} 진행 중',
-          best: '최고: {r}라운드 · 평균 ★{a}',
+          best: '최고: {r}라운드 · 평균 ★ {a}',
           challenge: '한계에 도전하세요!',
         },
         select: {
@@ -322,7 +322,7 @@
           endlessHint: 'Press Space',
           allCleared: 'All stages cleared!',
           progress: 'Stage {n} in progress',
-          best: 'Best: Round {r} · Avg ★{a}',
+          best: 'Best: Round {r} · Avg ★ {a}',
           challenge: 'Push your limits!',
         },
         select: {
@@ -1794,7 +1794,7 @@
     // 우상단 언어 선택. 두 언어를 나란히 두고 현재 언어를 강조하며, 각 절반을 눌러
     // 그 언어를 직접 고른다 — '누르면 무엇으로 바뀌는지' 헷갈릴 여지를 없앤다.
     // 플레이 화면에서는 순수 플레이 중과 일시정지(확인 팝업) 때 숨긴다.
-    const LANG_OPTIONS = [['ko', '한국어'], ['en', 'EN']];
+    const LANG_OPTIONS = [['ko', '한국어'], ['en', 'English']]; // 각 언어를 그 언어의 고유 이름으로 표기
 
     function drawLangToggle() {
       if (screen === 'play' && (confirming || !isBlockingOverlay())) return;
