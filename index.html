@@ -952,6 +952,7 @@
       moveCooldown = 0;
       stack = [];
       lastEatAt = 0;
+      shakeUntil = 0; // 직전 판의 함정 흔들림이 새 판으로 이어지지 않게
       completed = false;
       timeLeft = stage.timeLimit;
       failed = false;
@@ -1171,6 +1172,9 @@
 
       // 결과(클리어/실패) 오버레이
       if (completed || failed) {
+        // 연출이 끝나 팝업이 실제로 보일 때까지는 입력을 받지 않는다.
+        // (받으면 별점·목숨 화면을 못 본 채 다음 판으로 넘어간다)
+        if (!clearPopupShown() && !failPopupShown()) return;
         if (mode === 'endless') {
           if (failed) {
             // 목숨 남으면 Enter로 같은 맵 재도전. 소진되면 ESC로 나가기만 — 런을 확실히 종료한다
@@ -1252,9 +1256,24 @@
       }
     });
 
+    // 결과 팝업은 연출(위쪽 번 낙하 / 하트 깨짐)이 끝난 뒤에야 화면에 나타난다.
+    // 렌더·키 입력·커서가 모두 아래 판정을 공유해야 "팝업이 아직 안 보이는데 키는 먹는" 창이 생기지 않는다.
+    function clearPopupShown() {
+      return completed && performance.now() - completedAt > CLEAR_POPUP_DELAY_MS;
+    }
+
+    function failPopupShown() {
+      return failed && (mode !== 'endless' || performance.now() - failedAt > HEART_BREAK_MS);
+    }
+
+    // 지금 조작을 가로막는 팝업이 실제로 떠 있는가
+    function isBlockingOverlay() {
+      return !!confirming || !!onboarding || clearPopupShown() || failPopupShown();
+    }
+
     // 화면 상태에 따라 커서 갱신 (플레이 중에는 숨김, 팝업이 뜨면 다시 표시)
     function updateCursor() {
-      const playing = screen === 'play' && !confirming && !completed && !failed && !onboarding;
+      const playing = screen === 'play' && !isBlockingOverlay();
       if (playing) {
         canvas.style.cursor = 'none';
       } else {
@@ -1503,7 +1522,9 @@
 
     // ===== 게임 루프 =====
     function update(dt) {
-      if (confirming || onboarding) return; // 팝업/온보딩 중에는 게임 정지
+      // 확인/온보딩 팝업 중에는 완전 정지. 클리어·실패 뒤에는 타이머와 이동만 막고(아래 개별 가드)
+      // 보간은 계속 돌려, 연출 중에 캐릭터가 마지막 칸으로 자연스럽게 안착하도록 둔다.
+      if (confirming || onboarding) return;
 
       // 타이머: 플레이 중에만 감소, 0이 되면 실패
       if (!completed && !failed) {
@@ -1919,14 +1940,9 @@
         : '이동: 방향키 or WASD | 재시작: R | 스테이지 선택: ESC';
       ctx.fillText(playHint, CANVAS_W / 2, CANVAS_H - 40);
 
-      // 클리어 팝업 (위쪽 번 착지 연출이 끝난 뒤 표시)
-      if (completed && performance.now() - completedAt > CLEAR_POPUP_DELAY_MS) {
-        renderClearPopup();
-      }
-      // 실패 팝업 (무한 모드는 하트 깨짐 연출이 끝난 뒤 표시)
-      if (failed && (mode !== 'endless' || performance.now() - failedAt > HEART_BREAK_MS)) {
-        renderFailPopup();
-      }
+      // 결과 팝업 (각각 번 착지 / 하트 깨짐 연출이 끝난 뒤 표시)
+      if (clearPopupShown()) renderClearPopup();
+      if (failPopupShown()) renderFailPopup();
 
       if (confirming) renderConfirmPopup();
       if (onboarding) renderOnboardingPopup();
