@@ -150,8 +150,6 @@
     const SIDE_W = 216;                          // 좌우 패널 너비
     const SIDE_L_X = 26;                         // 주문서 패널 x
     const SIDE_R_X = CANVAS_W - 26 - SIDE_W;     // 버거 스택 패널 x
-    const HEADER_X = 28;                         // 좌상단 로고 x
-    const HEADER_Y = 22;                         // 좌상단 로고 y
     const MOVES_PER_SEC = 6;      // 연속 이동 속도 (초당 최대 칸 수)
     const MOVE_INTERVAL = 1 / MOVES_PER_SEC;
     const LERP_SPEED = 18;        // 캐릭터 그리기 위치 보간 속도
@@ -527,18 +525,6 @@
       ctx.drawImage(img, cx - w / 2, bottomY - h, w, h);
     }
 
-    // 현재 스택을 레이어 SVG 버거로 그림 (결과 화면에서 재사용)
-    function drawBurger(cx, bottomY, layerW, step, withTop) {
-      const s = layerW / 120;
-      drawImg(IMG.bunBottom, cx, bottomY, s);
-      let y = bottomY - step;
-      for (const item of stack) {
-        drawImg(layerImage(item), cx, y, s);
-        y -= step;
-      }
-      if (withTop) drawImg(IMG.bunTop, cx, y, s);
-    }
-
     // ===== 상태 =====
     const canvas = document.getElementById('game');
     const ctx = canvas.getContext('2d');
@@ -708,8 +694,52 @@
     }
 
     // 개발용: 기존 스테이지 데이터가 설계 원칙(3별 경로·시간 여유)을 만족하는지 콘솔 경고
+    // 데이터 형식 점검. 솔버는 "풀 수 있는가"만 보므로 오타를 잡지 못한다 —
+    // 행 길이가 어긋나거나 모르는 문자가 섞이면 parseStage에서 조용히 빈 바닥이 되어
+    // 벽이 사라진 맵도 그대로 검증을 통과한다. 그런 실수를 개발 중에 콘솔로 드러낸다.
+    function checkStageData(data) {
+      const problems = [];
+      const cols = data.grid[0].length;
+      data.grid.forEach((row, r) => {
+        if (row.length !== cols) problems.push(`${r}행 길이 ${row.length}, 기대 ${cols}`);
+        for (const ch of row) {
+          if (ch !== '#' && ch !== '.' && ch !== 'S' && ch !== 'X' && !INGREDIENTS[ch]) {
+            problems.push(`${r}행에 알 수 없는 문자 '${ch}'`);
+          }
+        }
+      });
+
+      const flat = data.grid.join('');
+      const countOf = (ch) => flat.split(ch).length - 1;
+
+      const sCount = countOf('S');
+      if (sCount !== 1) problems.push(`시작점 S가 ${sCount}개 (1개여야 함)`);
+
+      // 재료는 종류별 1개만, 레시피에 없는 재료는 놓지 않는다 (prd.md 규칙)
+      for (const name of data.recipe) {
+        const code = NAME_TO_CODE[name];
+        if (!code) {
+          problems.push(`레시피에 없는 재료 이름 '${name}'`);
+          continue;
+        }
+        const n = countOf(code);
+        if (n !== 1) problems.push(`재료 ${name}(${code})가 격자에 ${n}개 (1개여야 함)`);
+      }
+      for (const code of Object.keys(INGREDIENTS)) {
+        const name = INGREDIENTS[code].name;
+        if (!data.recipe.includes(name) && countOf(code) > 0) {
+          problems.push(`레시피에 없는 재료 ${name}(${code})가 격자에 있음`);
+        }
+      }
+      return problems;
+    }
+
     function verifyStages() {
       for (const data of STAGES) {
+        const problems = checkStageData(data);
+        if (problems.length) {
+          console.warn(`[stage ${data.id} "${data.name}"] 데이터 오류`, problems);
+        }
         const v = validateStage(data);
         if (!v.reachable || !v.perfectPath || !v.timeOk) {
           console.warn(`[stage ${data.id} "${data.name}"] 검증 경고`, v);
@@ -1027,8 +1057,10 @@
     };
 
     // i번째 스테이지 잠금 해제 여부 (첫 스테이지이거나 이전 스테이지를 클리어)
-    function isUnlocked(i) {
-      return i === 0 || loadSave()[STAGES[i - 1].id] !== undefined;
+    // 여러 스테이지를 연달아 판정하는 곳(선택 화면)은 이미 읽어둔 save를 넘겨 중복 조회를 피한다.
+    function isUnlocked(i, save) {
+      const s = save || loadSave();
+      return i === 0 || s[STAGES[i - 1].id] !== undefined;
     }
 
     function exitToSelect() {
@@ -1416,26 +1448,6 @@
       ctx.fillText(text, cx, cy + offset);
     }
 
-    // 이모지 등 좌우 여백/중심이 불규칙한 문자를 완벽히 가로세로 중앙에 정렬하는 헬퍼
-    const textCenterCache = {};
-    function fillOpticalCenter(text, cx, cy) {
-      const key = ctx.font + ':' + text;
-      let off = textCenterCache[key];
-      if (off === undefined) {
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'alphabetic';
-        const m = ctx.measureText(text);
-        off = {
-          x: (m.actualBoundingBoxLeft - m.actualBoundingBoxRight) / 2,
-          y: (m.actualBoundingBoxAscent - m.actualBoundingBoxDescent) / 2
-        };
-        textCenterCache[key] = off;
-      }
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'alphabetic';
-      ctx.fillText(text, cx + off.x, cy + off.y);
-    }
-
     function tryMove(dc, dr) {
       const nc = player.col + dc;
       const nr = player.row + dr;
@@ -1730,7 +1742,7 @@
 
       for (let i = 0; i < STAGES.length; i++) {
         const data = STAGES[i];
-        const unlocked = isUnlocked(i);
+        const unlocked = isUnlocked(i, save);
         const selected = i === selectedIndex;
         const col = i % cols;
         const row = Math.floor(i / cols);
@@ -1839,7 +1851,7 @@
         const rightHudX = SIDE_R_X + SIDE_W / 2;
         const currentAvg = endlessClears > 0 ? (endlessStarSum / endlessClears).toFixed(1) : '-';
         ctx.fillStyle = COLORS.star;
-        ctx.font = 'bold 18px Pretendard, sans-serif'; // 기존 20px에서 2pt(2px) 줄임
+        ctx.font = uiFont(FONT.body, 'bold');
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
         ctx.fillText(`평균 ★ ${currentAvg}`, rightHudX, hudY);
