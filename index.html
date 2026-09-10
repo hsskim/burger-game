@@ -1234,11 +1234,21 @@
     }
 
     // ===== 언어 적용 =====
-    // 저장된 선택이 있으면 그것을, 없으면 브라우저 언어로 결정
+    // 저장된 선택이 있으면 그것을, 없으면 브라우저 언어로 결정.
+    // navigator.language(1순위 하나)가 아니라 navigator.languages(선호 순서 전체)를 훑는다 —
+    // 예: ['ja','ko','en'] 사용자는 영어보다 한국어를 선호한다고 밝힌 것이므로 한국어를 준다.
     function detectLang() {
       const saved = storageGet(LANG_KEY);
       if (saved === 'ko' || saved === 'en') return saved;
-      return (navigator.language || '').toLowerCase().startsWith('ko') ? 'ko' : 'en';
+      // 빈 배열도 truthy라 length로 확인한다 (일부 프라이버시 설정에서 []가 온다)
+      const langs = navigator.languages;
+      const prefs = (langs && langs.length) ? langs : [navigator.language || ''];
+      for (const pref of prefs) {
+        const tag = String(pref).toLowerCase();
+        if (tag.startsWith('ko')) return 'ko';
+        if (tag.startsWith('en')) return 'en';
+      }
+      return 'en'; // 지원하지 않는 언어 환경의 기본값
     }
 
     // 캔버스는 매 프레임 다시 그려지므로 자동 반영된다.

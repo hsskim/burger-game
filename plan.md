@@ -48,7 +48,10 @@
 단계 4 구현 메모:
 - 사용자에게 보이는 문자열 70개를 전부 `STRINGS = { ko, en }` 사전으로 옮기고 `t('a.b.c', params)`로 조회한다.
   스테이지 이름 10개는 `STAGES`에서 분리했고, 판 이름은 `stageTitle(data)`가 스토리/무한을 모두 처리한다.
-- 언어 결정: 저장값(`burger-game-lang`) → 없거나 손상되면 `navigator.language`. 토글 시 즉시 저장·반영.
+- 언어 결정: 저장값(`burger-game-lang`) → 없거나 손상되면 브라우저 언어. 토글 시 즉시 저장·반영.
+  브라우저 언어는 `navigator.language`(1순위 하나)가 아니라 `navigator.languages`(선호 순서 전체)를 훑는다 —
+  `['ja','ko','en']` 사용자는 영어보다 한국어를 선호한다고 밝힌 것이므로 한국어를 준다. 빈 배열도 truthy라
+  `length`로 확인해 `navigator.language`로 폴백한다(일부 프라이버시 설정에서 `[]`가 온다).
 - `applyLanguage()`가 모바일 안내 DOM·`<html lang>`·`<title>`·meta description을 갱신한다. 캔버스는 매 프레임
   다시 그려지므로 리로드가 필요 없다.
 - 언어 선택은 우상단 분절형 알약(`한국어 | English`). 현재 언어를 강조하고 각 절반이 그 언어를 직접 선택한다.
